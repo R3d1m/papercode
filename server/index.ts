@@ -8,6 +8,7 @@ import coursesRoutes from './routes/courses';
 import classroomsRoutes from './routes/classrooms';
 import submissionsRoutes from './routes/submissions';
 import blogsRoutes from './routes/blogs';
+import adminRoutes from './routes/admin';
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use('/api/courses', coursesRoutes);
 app.use('/api/classrooms', classroomsRoutes);
 app.use('/api/submissions', submissionsRoutes);
 app.use('/api/blogs', blogsRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.listen(config.port, '0.0.0.0', () => {
   console.log('=================================================================');

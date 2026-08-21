@@ -26,30 +26,74 @@ router.get('/', async (req: Request, res: Response) => {
     const lessonsByModule: Record<string, any[]> = {};
     for (const l of lessonsRes.rows) {
       if (!lessonsByModule[l.module_id]) lessonsByModule[l.module_id] = [];
+      
+      const mcqObj = l.mcq_data && typeof l.mcq_data === 'object' && l.mcq_data.question ? l.mcq_data : {
+        id: 'mcq-' + l.id,
+        question: 'What is the primary function of this concept?',
+        options: [
+          { id: 'opt-1', text: 'Executes standard procedural statement', isCorrect: true },
+          { id: 'opt-2', text: 'Stops compilation immediately', isCorrect: false }
+        ],
+        correctOptionIds: ['opt-1'],
+        correctOptionId: 'opt-1',
+        explanation: 'Executes standard procedural code instructions.'
+      };
+
+      const exerciseObj = l.exercise_data && typeof l.exercise_data === 'object' && l.exercise_data.starterCode ? l.exercise_data : {
+        id: 'ex-' + l.id,
+        title: l.title || 'Coding Challenge',
+        prompt: l.subtitle || 'Complete this coding challenge on paper or in the IDE.',
+        language: 'python',
+        languageId: 71,
+        starterCode: 'print("Hello from PaperCode Bangladesh!")',
+        solutionSnippet: 'print("Hello from PaperCode Bangladesh!")',
+        testCases: [{ id: 'tc-1', input: '', expectedOutput: 'Hello from PaperCode Bangladesh!', description: 'Validate standard output' }],
+        rubric: [{ id: 'rb-1', title: 'Syntax Accuracy', maxPoints: 10, description: 'Matches required output' }]
+      };
+
+      const blocksObj = Array.isArray(l.blocks_data) && l.blocks_data.length > 0 ? l.blocks_data : [
+        {
+          id: 'blk-th-' + l.id,
+          type: 'theory',
+          title: 'Lesson Concept & Syntax Rules',
+          htmlContent: l.theory_html || `<h3>${l.title}</h3><p>${l.subtitle || ''}</p>`
+        },
+        {
+          id: mcqObj.id || ('blk-mcq-' + l.id),
+          type: 'mcq',
+          question: mcqObj.question,
+          options: mcqObj.options || [],
+          correctOptionIds: mcqObj.correctOptionIds || (mcqObj.correctOptionId ? [mcqObj.correctOptionId] : ['opt-1']),
+          explanation: mcqObj.explanation || ''
+        },
+        {
+          id: exerciseObj.id || ('blk-ex-' + l.id),
+          type: 'exercise',
+          title: exerciseObj.title || l.title,
+          prompt: exerciseObj.prompt || l.subtitle || 'Complete challenge',
+          language: exerciseObj.language || 'python',
+          languageId: exerciseObj.languageId || 71,
+          starterCode: exerciseObj.starterCode || 'print("Hello from PaperCode Bangladesh!")',
+          solutionSnippet: exerciseObj.solutionSnippet || '',
+          testCases: exerciseObj.testCases || [],
+          rubric: exerciseObj.rubric || []
+        }
+      ];
+
       lessonsByModule[l.module_id].push({
         id: l.id,
         moduleId: l.module_id,
         title: l.title,
-        subtitle: l.subtitle,
-        theoryHtml: l.theory_html,
-        exercise: l.exercise_data || {
-          id: 'ex-' + l.id,
-          title: l.title,
-          prompt: l.subtitle || 'Complete this coding challenge on paper or in the IDE.',
-          language: 'python',
-          starterCode: 'print("Hello from PaperCode Bangladesh!")'
-        },
-        mcq: l.mcq_data || {
-          id: 'mcq-' + l.id,
-          question: 'What does this concept accomplish in programming?',
-          options: [
-            { id: 'opt-1', text: 'Executes standard procedural statements', isCorrect: true },
-            { id: 'opt-2', text: 'Stops program compilation', isCorrect: false }
-          ],
-          correctOptionIds: ['opt-1'],
-          explanation: 'It performs standard instructions according to syntax.'
-        },
+        subtitle: l.subtitle || 'Lesson Overview',
+        durationMinutes: l.duration_minutes || 20,
         xpReward: l.xp_reward || 100,
+        conceptNotes: [l.subtitle || 'Learn core syntax and logic.'],
+        codeSnippet: exerciseObj.starterCode || 'print("Hello from PaperCode Bangladesh!")',
+        theoryContent: l.theory_html || `<h3>${l.title}</h3><p>${l.subtitle || ''}</p>`,
+        theoryHtml: l.theory_html || `<h3>${l.title}</h3><p>${l.subtitle || ''}</p>`,
+        mcq: mcqObj,
+        exercise: exerciseObj,
+        blocks: blocksObj,
         sortOrder: l.sort_order
       });
     }
@@ -64,9 +108,13 @@ router.get('/', async (req: Request, res: Response) => {
     const courses = coursesRes.rows.map(c => ({
       id: c.id,
       title: c.title,
+      subtitle: c.description || '',
       description: c.description,
+      category: c.language ? (c.language.toUpperCase() + ' Programming') : 'ICT Curriculum',
       language: c.language || 'python',
       level: c.level || 'Beginner',
+      estimatedHours: 12,
+      publishedBy: 'teacher',
       authorId: c.author_id,
       authorName: c.author_name || 'Verified Educator',
       isPublished: Boolean(c.is_published),

@@ -12,23 +12,29 @@ interface JoinClassModalProps {
 export const JoinClassModal: React.FC<JoinClassModalProps> = ({ isOpen, onClose }) => {
   const { joinClassroom } = useApp();
   const [joinCode, setJoinCode] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ success?: boolean; message?: string } | null>(null);
 
   if (!isOpen) return null;
 
-  const handleJoin = (e: React.FormEvent) => {
+  const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!joinCode.trim()) return;
 
-    const res = joinClassroom(joinCode.trim());
-    setStatusMessage(res);
-    if (res.success) {
-      confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
-      setTimeout(() => {
-        onClose();
-        setJoinCode('');
-        setStatusMessage(null);
-      }, 1200);
+    setIsLoading(true);
+    try {
+      const res = await joinClassroom(joinCode.trim());
+      setStatusMessage(res);
+      if (res.success) {
+        confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+        setTimeout(() => {
+          onClose();
+          setJoinCode('');
+          setStatusMessage(null);
+        }, 1200);
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 

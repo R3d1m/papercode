@@ -41,7 +41,7 @@ interface AppContextType {
   studentXp: number;
   studentStreak: number;
   addXp: (amount: number) => void;
-  joinClassroom: (code: string) => { success: boolean; message: string; classroom?: Classroom };
+  joinClassroom: (code: string) => Promise<{ success: boolean; message: string; classroom?: Classroom }>;
   createClassroom: (name: string, gradeLevel: string, subject: string, courseIds?: string[]) => Classroom;
   updateClassroom: (classroomId: string, data: Partial<Classroom>) => void;
   updateClassroomCourses: (classroomId: string, courseIds: string[]) => void;
@@ -110,29 +110,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [studentXp, setStudentXp] = useState<number>(0);
   const [studentStreak, setStudentStreak] = useState<number>(0);
 
-  // Sync classrooms from backend on mount with safe object normalization
-  useEffect(() => {
+  // Sync classrooms from backend on mount
+  useEffect(() => {    
     apiClient.getClassrooms().then(res => {
-      if (res && res.classrooms && Array.isArray(res.classrooms) && res.classrooms.length > 0) {
-        const normalized = res.classrooms.map((c: any) => ({
-          id: c.id,
-          name: c.name || 'Classroom',
-          gradeLevel: c.gradeLevel || c.grade || 'Class 9',
-          subject: c.subject || 'ICT',
-          teacherId: c.teacherId || c.teacher_id || '',
-          teacherName: c.teacherName || 'Teacher',
-          joinCode: c.joinCode || c.join_code || 'PC-1000',
-          archived: Boolean(c.archived),
-          roster: Array.isArray(c.roster) ? c.roster : [],
-          assignments: Array.isArray(c.assignments) ? c.assignments : [],
-          courseIds: Array.isArray(c.courseIds) ? c.courseIds : ['crs-py-basics']
-        }));
-
-        setClassrooms(prev => {
-          const ids = new Set(prev.map(c => c.id));
-          const newOnes = normalized.filter((c: any) => !ids.has(c.id));
-          return [...newOnes, ...prev];
-        });
+      if (res && res.classrooms && Array.isArray(res.classrooms)) {
+        setClassrooms(res.classrooms);
       }
     }).catch(e => {
       console.warn('Classroom sync skipped:', e);
@@ -141,11 +123,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Sync courses from backend on mount
     apiClient.getCourses().then(res => {
       if (res && res.courses && Array.isArray(res.courses) && res.courses.length > 0) {
-        setCourses(prev => {
-          const ids = new Set(prev.map(c => c.id));
-          const newCourses = res.courses.filter((c: any) => !ids.has(c.id));
-          return [...newCourses, ...prev];
-        });
+        setCourses(res.courses);
       }
     }).catch(() => {});
   }, []);
@@ -365,22 +343,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser(prev => ({ ...prev, xp: (prev.xp || 0) + amount }));
   };
 
-  const joinClassroom = (code: string) => {
+  const joinClassroom = async (code: string): Promise<{ success: boolean; message: string; classroom?: any }> => {
     const formattedCode = (code || '').trim().toUpperCase();
-    if (!formattedCode) return { success: false, message: 'Please enter a 6-digit Join Code.' };
-    apiClient.joinClassroom(formattedCode, currentUser?.id);
-
-    const found = classrooms.find(c => (c?.joinCode || (c as any)?.join_code || '').toUpperCase() === formattedCode);
-    if (found) {
-      if (!(currentUser?.enrolledClassroomIds || []).includes(found.id)) {
-        setCurrentUser(prev => ({
-          ...prev,
-          enrolledClassroomIds: [...(prev.enrolledClassroomIds || []), found.id]
-        }));
-      }
-      return { success: true, message: 'Enrolled in ' + (found.name || 'Classroom') + ' successfully!', classroom: found };
+    if (!formattedCode) return { success: false, message: 'Please enter a valid Join Code.' };
+    
+    const backendRes = await apiClient.joinClassroom(formattedCode, currentUser?.id);
+    if (!backendRes || !backendRes.success) {
+      return { 
+        success: false, 
+        message: backendRes?.message || 'Invalid or expired Join Code. Please verify with your teacher.' 
+      };
     }
-    return { success: false, message: 'Invalid or expired 6-character Join Code. Please verify with your teacher.' };
+
+    // Refresh all classrooms from backend to get fresh rosters
+    const classRes = await apiClient.getClassrooms();
+    if (classRes && Array.isArray(classRes.classrooms)) {
+      setClassrooms(classRes.classrooms);
+    }
+
+    if (backendRes.classroom) {
+      const clsId = backendRes.classroom.id;
+      if (!(currentUser?.enrolledClassroomIds || []).includes(clsId)) {
+        const updatedUser: User = {
+          ...currentUser,
+          enrolledClassroomIds: [...(currentUser?.enrolledClassroomIds || []), clsId]
+        };
+        setCurrentUser(updatedUser);
+        try {
+          localStorage.setItem('papercode_user_session', JSON.stringify(updatedUser));
+        } catch {}
+      }
+    }
+
+    return { 
+      success: true, 
+      message: backendRes.message || 'Enrolled successfully!', 
+      classroom: backendRes.classroom 
+    };
   };
 
   const createClassroom = (name: string, gradeLevel: string, subject: string, courseIds: string[] = ['crs-py-basics']) => {
@@ -399,7 +398,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       courseIds: courseIds.length > 0 ? courseIds : ['crs-py-basics']
     };
 
-    apiClient.createClassroom({ name, subject, grade: gradeLevel, teacherId: currentUser.id });
+    apiClient.createClassroom({ name, subject, grade: gradeLevel, teacherId: currentUser.id, courseIds });
     setClassrooms(prev => [newClassroom, ...prev]);
     return newClassroom;
   };
@@ -413,11 +412,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const removeStudentFromClassroom = (classroomId: string, studentId: string) => {
+    apiClient.removeStudentFromClassroom(classroomId, studentId);
     setClassrooms(prev => prev.map(c => {
       if (c.id === classroomId) {
         return {
           ...c,
-          roster: c.roster.filter(s => s.studentId !== studentId)
+          roster: (c.roster || []).filter(s => s.studentId !== studentId)
         };
       }
       return c;
@@ -425,6 +425,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteClassroom = (classroomId: string) => {
+    apiClient.deleteClassroom(classroomId);
     setClassrooms(prev => prev.filter(c => c.id !== classroomId));
   };
 
@@ -442,10 +443,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...assignmentData,
       id: 'asg-' + Date.now(),
       totalSubmissions: 0,
-      totalStudents: classrooms.find(c => c.id === classroomId)?.roster.length || 0,
+      totalStudents: classrooms.find(c => c.id === classroomId)?.roster?.length || 0,
       status: 'active'
     };
 
+    apiClient.addAssignmentToClassroom(classroomId, newAssignment);
     setClassrooms(prev => prev.map(c => {
       if (c.id === classroomId) {
         return {
@@ -458,6 +460,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteAssignmentFromClassroom = (classroomId: string, assignmentId: string) => {
+    apiClient.deleteAssignmentFromClassroom(classroomId, assignmentId);
     setClassrooms(prev => prev.map(c => {
       if (c.id === classroomId) {
         return {
@@ -562,7 +565,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: updatedLesson.id,
       title: updatedLesson.title,
       subtitle: updatedLesson.subtitle,
-      theoryHtml: updatedLesson.theoryContent || '',
+      theoryHtml: updatedLesson.theoryContent || (updatedLesson as any).theoryHtml || '',
       exercise: updatedLesson.exercise,
       mcq: updatedLesson.mcq,
       xpReward: updatedLesson.xpReward || 100
@@ -573,9 +576,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           ...course,
           modules: (course.modules || []).map(module => {
             if (module.id === moduleId) {
+              const existingIdx = (module.lessons || []).findIndex(les => les.id === lessonId);
+              const newLessons = existingIdx >= 0
+                ? module.lessons.map(les => les.id === lessonId ? updatedLesson : les)
+                : [...(module.lessons || []), updatedLesson];
               return {
                 ...module,
-                lessons: (module.lessons || []).map(les => les.id === lessonId ? updatedLesson : les)
+                lessons: newLessons
               };
             }
             return module;

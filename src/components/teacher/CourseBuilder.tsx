@@ -392,13 +392,12 @@ export const CourseBuilder: React.FC = () => {
         blocks: lessonBlocks
       };
 
-      if (selectedModule) {
-        selectedModule.lessons.push(newLessonObj);
-      } else if (selectedCourse.modules?.length > 0) {
-        selectedCourse.modules[0].lessons.push(newLessonObj);
+      if (targetModuleId) {
+        updateLesson(selectedCourse.id, targetModuleId, newLessonObj.id, newLessonObj);
       } else {
+        const defaultModId = 'mod-' + Date.now();
         const defaultMod: Module = {
-          id: 'mod-' + Date.now(),
+          id: defaultModId,
           title: 'Module 1: General Lessons',
           description: 'Default module',
           category: 'Core',
@@ -406,6 +405,7 @@ export const CourseBuilder: React.FC = () => {
           lessons: [newLessonObj]
         };
         addModuleToCourse(selectedCourse.id, defaultMod);
+        updateLesson(selectedCourse.id, defaultModId, newLessonObj.id, newLessonObj);
       }
     }
 
