@@ -3,7 +3,7 @@ import { pool } from '../db';
 
 const router = Router();
 
-let geminiHitCounter = 48;
+let geminiHitCounter = 0;
 
 export function incrementGeminiHitCount() {
   geminiHitCounter += 1;
@@ -15,15 +15,13 @@ router.get('/vitals', async (req: Request, res: Response) => {
     const teachersRes = await pool.query("SELECT COUNT(*) FROM users WHERE role = 'teacher'");
     const coursesRes = await pool.query('SELECT COUNT(*) FROM courses');
     const classroomsRes = await pool.query('SELECT COUNT(*) FROM classrooms');
-    const enrollmentsRes = await pool.query('SELECT COUNT(*) FROM classroom_enrollments');
-    const submissionsRes = await pool.query('SELECT COUNT(*) FROM submissions');
 
     const totalStudents = parseInt(studentsRes.rows[0]?.count || '0', 10);
     const totalTeachers = parseInt(teachersRes.rows[0]?.count || '0', 10);
     const totalCourses = parseInt(coursesRes.rows[0]?.count || '0', 10);
     const totalClassrooms = parseInt(classroomsRes.rows[0]?.count || '0', 10);
-    const totalEnrollments = parseInt(enrollmentsRes.rows[0]?.count || '0', 10);
-    const totalSubmissions = parseInt(submissionsRes.rows[0]?.count || '0', 10);
+    const totalRoadmaps = totalCourses > 0 ? 1 : 0;
+    const activeUsers = Math.max(1, totalStudents + totalTeachers);
 
     return res.json({
       success: true,
@@ -31,15 +29,10 @@ router.get('/vitals', async (req: Request, res: Response) => {
         totalStudents,
         totalTeachers,
         totalCourses,
-        totalRoadmaps: 6,
+        totalRoadmaps,
         totalClassrooms,
-        totalEnrollments,
-        totalSubmissions,
         geminiHitCount: geminiHitCounter,
-        liveActiveUsers: Math.max(1, totalStudents + totalTeachers > 0 ? (totalStudents + totalTeachers) : 8),
-        systemUptime: '99.98%',
-        databaseStatus: 'Connected (Neon PostgreSQL SSL)',
-        engineStatus: 'Gemini 2.5 Flash Vision Active'
+        activeUsers
       }
     });
   } catch (err: any) {
@@ -47,18 +40,13 @@ router.get('/vitals', async (req: Request, res: Response) => {
     return res.json({
       success: true,
       stats: {
-        totalStudents: 1,
-        totalTeachers: 1,
-        totalCourses: 3,
-        totalRoadmaps: 6,
-        totalClassrooms: 1,
-        totalEnrollments: 1,
-        totalSubmissions: 0,
-        geminiHitCount: geminiHitCounter,
-        liveActiveUsers: 5,
-        systemUptime: '99.98%',
-        databaseStatus: 'Connected',
-        engineStatus: 'Gemini 2.5 Flash Vision Active'
+        totalStudents: 0,
+        totalTeachers: 0,
+        totalCourses: 0,
+        totalRoadmaps: 0,
+        totalClassrooms: 0,
+        geminiHitCount: 0,
+        activeUsers: 1
       }
     });
   }

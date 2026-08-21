@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { config } from '../config';
+import { incrementGeminiHitCount } from './admin';
 
 const router = Router();
 
@@ -52,6 +53,7 @@ router.post('/extract', async (req: Request, res: Response) => {
           .trim();
 
         if (extractedCode) {
+          incrementGeminiHitCount();
           return res.json({
             success: true,
             engine: 'Gemini 2.5 Flash Vision OCR',
