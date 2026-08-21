@@ -75,10 +75,10 @@ export const StudentRoadmapsView: React.FC<StudentRoadmapsViewProps> = ({ onOpen
                 <div className="flex items-center space-x-4">
                   <span className="font-mono text-xs font-bold text-graphite flex items-center gap-1.5">
                     <Users className="w-4 h-4 text-stamp" />
-                    <span>{rdm.enrolledCount.toLocaleString()} Students Enrolled</span>
+                    <span>{(rdm?.enrolledCount ?? 0).toLocaleString()} Students Enrolled</span>
                   </span>
                   <span className="font-mono text-xs font-extrabold text-stamp">
-                    💎 {rdm.totalXp.toLocaleString()} XP
+                    💎 {(rdm?.totalXp ?? 0).toLocaleString()} XP
                   </span>
                 </div>
               </div>

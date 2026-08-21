@@ -101,7 +101,7 @@ export const PublicRoadmapsPage: React.FC<PublicRoadmapsPageProps> = ({ onOpenAu
                 </div>
                 <div className="p-2 bg-paper-muted rounded-xl border border-ink/20">
                   <span className="text-[10px] text-graphite block uppercase">Students</span>
-                  <strong>{roadmap.enrolledCount.toLocaleString()}</strong>
+                  <strong>{(roadmap?.enrolledCount ?? 0).toLocaleString()}</strong>
                 </div>
               </div>
 

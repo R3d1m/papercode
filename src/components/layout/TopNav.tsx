@@ -207,7 +207,7 @@ export const TopNav: React.FC<TopNavProps> = ({
 
                   <div className="flex items-center space-x-1.5 px-2.5 py-1 bg-highlighter border-2 border-ink text-ink font-mono text-xs font-extrabold rounded-full shadow-solid-xs">
                     <Award className="w-3.5 h-3.5 text-ink" />
-                    <span>{studentXp.toLocaleString()} XP</span>
+                    <span>{(studentXp ?? 0).toLocaleString()} XP</span>
                   </div>
                 </div>
               )}

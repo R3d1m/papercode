@@ -38,6 +38,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = () => {
   return (
     <div className="space-y-6 py-2 max-w-7xl mx-auto animate-fadeIn">
       
+      {/* Admin Dashboard Heading */}
+      <div className="flex items-center justify-between pb-4 border-b-2 border-ink/10">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-stamp text-white flex items-center justify-center text-xl shadow-solid-xs border-2 border-ink flex-shrink-0">
+            🛡️
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight">
+              Admin Dashboard
+            </h1>
+            <p className="text-xs text-graphite font-bold">
+              Real-time platform vitals and PostgreSQL database telemetry
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* 7 EXACT REAL DATABASE METRIC CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         
@@ -50,7 +67,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = () => {
             </div>
           </div>
           <div className="text-4xl font-extrabold font-mono text-ink tracking-tight">
-            {stats.totalStudents.toLocaleString()}
+            {(stats?.totalStudents ?? 0).toLocaleString()}
           </div>
           <div className="text-[11px] font-mono text-green-700 font-bold">
             ● Registered in Database
@@ -66,7 +83,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = () => {
             </div>
           </div>
           <div className="text-4xl font-extrabold font-mono text-ink tracking-tight">
-            {stats.totalTeachers.toLocaleString()}
+            {(stats?.totalTeachers ?? 0).toLocaleString()}
           </div>
           <div className="text-[11px] font-mono text-stamp font-bold">
             ● Verified in Database
@@ -82,7 +99,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = () => {
             </div>
           </div>
           <div className="text-4xl font-extrabold font-mono text-ink tracking-tight">
-            {stats.totalCourses.toLocaleString()}
+            {(stats?.totalCourses ?? 0).toLocaleString()}
           </div>
           <div className="text-[11px] font-mono text-graphite font-bold">
             ● Saved in Database
@@ -98,7 +115,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = () => {
             </div>
           </div>
           <div className="text-4xl font-extrabold font-mono text-ink tracking-tight">
-            {stats.totalClassrooms.toLocaleString()}
+            {(stats?.totalClassrooms ?? 0).toLocaleString()}
           </div>
           <div className="text-[11px] font-mono text-graphite font-bold">
             ● Active in Database
@@ -114,7 +131,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = () => {
             </div>
           </div>
           <div className="text-4xl font-extrabold font-mono text-ink tracking-tight">
-            {stats.totalRoadmaps.toLocaleString()}
+            {(stats?.totalRoadmaps ?? 0).toLocaleString()}
           </div>
           <div className="text-[11px] font-mono text-green-700 font-bold">
             ● Active Tracks
@@ -130,7 +147,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = () => {
             </div>
           </div>
           <div className="text-4xl font-extrabold font-mono text-ink tracking-tight">
-            {stats.geminiHitCount.toLocaleString()}
+            {(stats?.geminiHitCount ?? 0).toLocaleString()}
           </div>
           <div className="text-[11px] font-mono text-ink font-bold">
             ⚡ Vision OCR Invocations
@@ -147,7 +164,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = () => {
             </span>
           </div>
           <div className="text-4xl font-extrabold font-mono text-ink tracking-tight flex items-center gap-3">
-            <span>{stats.activeUsers.toLocaleString()}</span>
+            <span>{(stats?.activeUsers ?? 1).toLocaleString()}</span>
             <span className="text-xs font-mono font-bold text-graphite">Users in system</span>
           </div>
           <div className="pt-2 border-t border-ink/15 text-xs text-graphite font-medium flex items-center justify-between">

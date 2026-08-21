@@ -212,7 +212,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onBack }) => {
                   <span className="text-[10px] font-mono text-graphite uppercase block">Total XP</span>
                   <div className="flex items-center gap-1 mt-0.5">
                     <Award className="w-4 h-4 text-ink" />
-                    <strong className="text-base font-extrabold text-ink font-mono">{studentXp.toLocaleString()}</strong>
+                    <strong className="text-base font-extrabold text-ink font-mono">{(studentXp ?? 0).toLocaleString()}</strong>
                   </div>
                 </div>
               </div>
