@@ -11,7 +11,8 @@ import {
   MapPin, 
   ExternalLink,
   X,
-  GraduationCap
+  GraduationCap,
+  CheckCircle2
 } from 'lucide-react';
 
 interface VlogsSectionProps {

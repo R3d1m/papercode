@@ -87,17 +87,35 @@ export interface Exercise {
   rubric: RubricCriterion[];
 }
 
+export interface Judge0ExecutionResult {
+  stdout: string | null;
+  stderr: string | null;
+  compile_output: string | null;
+  message: string | null;
+  status: {
+    id: number;
+    description: string;
+  };
+  time: string;
+  memory: number;
+  exit_code: number;
+}
+
 export interface Lesson {
   id: string;
+  moduleId?: string;
   title: string;
   subtitle: string;
   durationMinutes: number;
   xpReward: number;
   conceptNotes: string[];
   codeSnippet: string;
+  theoryContent?: string;
+  theoryHtml?: string;
   mcq: MCQ;
   exercise: Exercise;
   blocks?: LessonBlock[];
+  sortOrder?: number;
 }
 
 export interface Module {
@@ -112,13 +130,16 @@ export interface Module {
 export interface Course {
   id: string;
   title: string;
-  subtitle: string;
+  subtitle?: string;
   description: string;
   category: string;
   level: string;
-  estimatedHours: number;
-  publishedBy: 'admin' | 'teacher' | 'moderator';
+  estimatedHours?: number;
+  publishedBy?: 'admin' | 'teacher' | 'moderator';
+  authorId?: string;
   authorName: string;
+  language?: string;
+  isPublished?: boolean;
   modules: Module[];
   colorAccent?: string;
 }
@@ -162,6 +183,8 @@ export interface Classroom {
   roster: {
     studentId: string;
     name: string;
+    email?: string;
+    school?: string;
     avatar: string;
     division: string;
     completedAssignmentsCount: number;

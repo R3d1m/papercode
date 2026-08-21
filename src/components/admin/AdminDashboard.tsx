@@ -21,7 +21,7 @@ import {
 import confetti from 'canvas-confetti';
 
 interface AdminDashboardProps {
-  initialTab?: 'vitals' | 'cms' | 'moderators';
+  initialTab?: 'vitals' | 'cms' | 'moderators' | 'institutions';
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ initialTab = 'vitals' }) => {

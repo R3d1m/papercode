@@ -6,6 +6,7 @@ interface BentoCardProps {
   className?: string;
   withBorder?: boolean;
   shadow?: 'none' | 'sm' | 'md' | 'lg';
+  onClick?: () => void;
 }
 
 export const BentoCard: React.FC<BentoCardProps> = ({
@@ -13,7 +14,8 @@ export const BentoCard: React.FC<BentoCardProps> = ({
   variant = 'white',
   className = '',
   withBorder = true,
-  shadow = 'md'
+  shadow = 'md',
+  onClick
 }) => {
   const bgStyles = {
     white: 'bg-white text-ink',
@@ -31,6 +33,7 @@ export const BentoCard: React.FC<BentoCardProps> = ({
 
   return (
     <div
+      onClick={onClick}
       className={`${bgStyles[variant]} ${withBorder ? 'border-[2px] border-ink' : ''} rounded-bento p-6 sm:p-8 ${shadowStyles[shadow]} transition-all duration-200 ${className}`}
     >
       {children}

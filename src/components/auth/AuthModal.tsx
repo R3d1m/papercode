@@ -301,6 +301,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
 
             <PillButton
+              type="submit"
               variant="highlighter"
               size="lg"
               className="w-full btn-bounce shadow-solid-xs"
@@ -393,6 +394,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
 
             <PillButton
+              type="submit"
               variant={selectedRole === 'teacher' ? 'stamp' : 'highlighter'}
               size="lg"
               className="w-full btn-bounce"

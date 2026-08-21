@@ -4,6 +4,7 @@ interface PillButtonProps {
   children: React.ReactNode;
   variant?: 'primary' | 'secondary' | 'highlighter' | 'stamp' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
+  type?: 'button' | 'submit' | 'reset';
   icon?: React.ReactNode;
   iconPosition?: 'left' | 'right';
   onClick?: () => void;
@@ -15,6 +16,7 @@ export const PillButton: React.FC<PillButtonProps> = ({
   children,
   variant = 'primary',
   size = 'md',
+  type = 'button',
   icon,
   iconPosition = 'right',
   onClick,
@@ -40,6 +42,7 @@ export const PillButton: React.FC<PillButtonProps> = ({
 
   return (
     <button
+      type={type}
       onClick={onClick}
       disabled={disabled}
       className={`${baseStyles} ${sizeStyles[size]} ${variantStyles[variant]} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}

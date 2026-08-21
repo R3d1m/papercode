@@ -27,7 +27,7 @@ export const CallToActionBanner: React.FC<CallToActionBannerProps> = ({ onOpenAu
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         {/* Student CTA Card */}
-        <BentoCard variant="yellow" className="p-8 sm:p-10 border-2 border-ink shadow-solid-md space-y-6 flex flex-col justify-between">
+        <BentoCard variant="highlighter" className="p-8 sm:p-10 border-2 border-ink shadow-solid-md space-y-6 flex flex-col justify-between">
           <div className="space-y-3">
             <div className="w-12 h-12 rounded-2xl bg-white border-2 border-ink flex items-center justify-center text-ink shadow-solid-xs">
               <GraduationCap className="w-7 h-7 text-ink" />
