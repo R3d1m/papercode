@@ -121,10 +121,11 @@ export const TopNav: React.FC<TopNavProps> = ({
 
     if (activeMode === 'admin') {
       return [
-        { label: 'Vitals & Stats', action: () => { setMobileMenuOpen(false); setCurrentView('admin_vitals'); }, active: currentView === 'admin_vitals' || currentView === 'admin_dashboard' },
-        { label: 'Roadmaps', action: () => { setMobileMenuOpen(false); setCurrentView('public_roadmaps'); }, active: currentView === 'public_roadmaps' },
-        { label: 'Courses', action: () => { setMobileMenuOpen(false); setCurrentView('public_courses'); }, active: currentView === 'public_courses' },
-        { label: 'Blogs', action: () => { setMobileMenuOpen(false); setCurrentView('public_blogs'); }, active: currentView === 'public_blogs' },
+        { label: 'Platform Vitals', action: () => { setMobileMenuOpen(false); setCurrentView('admin_vitals'); }, active: currentView === 'admin_vitals' || currentView === 'admin_dashboard' },
+        { label: 'Courses CMS', action: () => { setMobileMenuOpen(false); setCurrentView('admin_courses'); }, active: currentView === 'admin_courses' },
+        { label: 'Roadmaps CMS', action: () => { setMobileMenuOpen(false); setCurrentView('admin_roadmaps'); }, active: currentView === 'admin_roadmaps' },
+        { label: 'Blogs CMS', action: () => { setMobileMenuOpen(false); setCurrentView('admin_blogs'); }, active: currentView === 'admin_blogs' },
+        { label: 'Moderators', action: () => { setMobileMenuOpen(false); setCurrentView('admin_moderators'); }, active: currentView === 'admin_moderators' },
       ];
     }
 

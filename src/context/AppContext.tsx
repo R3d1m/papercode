@@ -98,15 +98,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [currentRole, setCurrentRole] = useState<Role>(() => getSavedUser().role || 'student');
   const [currentUser, setCurrentUser] = useState<User>(getSavedUser);
   
-  const [users, setUsers] = useState<User[]>([]);
-  const [moderators, setModerators] = useState<User[]>([]);
-  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [roadmaps, setRoadmaps] = useState<Roadmap[]>([]);
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [users, setUsers] = useState<User[]>(SEED_USERS);
+  const [moderators, setModerators] = useState<User[]>(SEED_MODERATORS);
+  const [classrooms, setClassrooms] = useState<Classroom[]>(SEED_CLASSROOMS);
+  const [courses, setCourses] = useState<Course[]>(SEED_COURSES);
+  const [roadmaps, setRoadmaps] = useState<Roadmap[]>(SEED_ROADMAPS);
+  const [submissions, setSubmissions] = useState<Submission[]>(SEED_SUBMISSIONS);
   
   const [completedLessonIds, setCompletedLessonIds] = useState<string[]>([]);
-  const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
+  const [activeLesson, setActiveLesson] = useState<Lesson | null>(SEED_COURSES[0]?.modules?.[0]?.lessons?.[0] || null);
   const [studentXp, setStudentXp] = useState<number>(0);
   const [studentStreak, setStudentStreak] = useState<number>(0);
 

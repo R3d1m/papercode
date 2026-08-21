@@ -216,7 +216,7 @@ export const App: React.FC = () => {
                   ) : currentView === 'teacher_classrooms' ? (
                     <TeacherDashboard />
                   ) : (
-                    <AdminDashboard initialTab="cms" />
+                    <AdminDashboard initialTab="courses" />
                   )}
                 </div>
               )}
@@ -224,12 +224,14 @@ export const App: React.FC = () => {
               {/* 5. ADMIN HQ VIEWS */}
               {activeMode === 'admin' && (
                 <div>
-                  {currentView === 'public_blogs' ? (
-                    <PublicBlogsPage onOpenAuth={handleOpenAuth} />
-                  ) : currentView === 'public_roadmaps' ? (
-                    <PublicRoadmapsPage onOpenAuth={handleOpenAuth} />
-                  ) : currentView === 'public_courses' ? (
-                    <PublicCoursesPage onOpenAuth={handleOpenAuth} />
+                  {currentView === 'admin_courses' ? (
+                    <AdminDashboard initialTab="courses" />
+                  ) : currentView === 'admin_roadmaps' ? (
+                    <AdminDashboard initialTab="roadmaps" />
+                  ) : currentView === 'admin_blogs' ? (
+                    <AdminDashboard initialTab="blogs" />
+                  ) : currentView === 'admin_moderators' ? (
+                    <AdminDashboard initialTab="moderators" />
                   ) : (
                     <AdminDashboard initialTab="vitals" />
                   )}
