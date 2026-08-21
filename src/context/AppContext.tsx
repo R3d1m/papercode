@@ -98,19 +98,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [currentRole, setCurrentRole] = useState<Role>(() => getSavedUser().role || 'student');
   const [currentUser, setCurrentUser] = useState<User>(getSavedUser);
   
-  const [users, setUsers] = useState<User[]>(SEED_USERS);
-  const [moderators, setModerators] = useState<User[]>(SEED_MODERATORS);
-  const [classrooms, setClassrooms] = useState<Classroom[]>(SEED_CLASSROOMS);
-  const [courses, setCourses] = useState<Course[]>(SEED_COURSES);
-  const [roadmaps, setRoadmaps] = useState<Roadmap[]>(SEED_ROADMAPS);
-  const [submissions, setSubmissions] = useState<Submission[]>(SEED_SUBMISSIONS);
+  const [users, setUsers] = useState<User[]>([]);
+  const [moderators, setModerators] = useState<User[]>([]);
+  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [roadmaps, setRoadmaps] = useState<Roadmap[]>([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
   
   const [completedLessonIds, setCompletedLessonIds] = useState<string[]>([]);
-  const [activeLesson, setActiveLesson] = useState<Lesson | null>(SEED_COURSES[0].modules[0].lessons[0]);
+  const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
   const [studentXp, setStudentXp] = useState<number>(0);
   const [studentStreak, setStudentStreak] = useState<number>(0);
 
-  // Sync classrooms from backend on mount
+  // Sync classrooms from PostgreSQL backend on mount
   useEffect(() => {    
     apiClient.getClassrooms().then(res => {
       if (res && res.classrooms && Array.isArray(res.classrooms)) {
@@ -120,10 +120,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Classroom sync skipped:', e);
     });
 
-    // Sync courses from backend on mount
+    // Sync courses from PostgreSQL backend on mount
     apiClient.getCourses().then(res => {
       if (res && res.courses && Array.isArray(res.courses) && res.courses.length > 0) {
         setCourses(res.courses);
+        if (res.courses[0]?.modules?.[0]?.lessons?.[0]) {
+          setActiveLesson(res.courses[0].modules[0].lessons[0]);
+        }
+        
+        // Build dynamic roadmaps from database courses
+        const dbRoadmaps: Roadmap[] = [
+          {
+            id: 'rdm-db-hsc-ict',
+            title: 'NCTB HSC ICT Chapter 5 (Structured Programming)',
+            description: 'Master variables, data types, conditional branching, loops, and arrays directly on paper notebook.',
+            badge: '🏆 National HSC Board Exam Mastery',
+            targetAudience: 'HSC & College Students',
+            courses: res.courses,
+            isPublic: true,
+            totalXp: 5000,
+            enrolledCount: 150
+          }
+        ];
+        setRoadmaps(dbRoadmaps);
       }
     }).catch(() => {});
   }, []);

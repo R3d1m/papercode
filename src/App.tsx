@@ -5,7 +5,6 @@ import { HeroNotebook } from './components/marketing/HeroNotebook';
 import { ProblemStats } from './components/marketing/ProblemStats';
 import { WhyOthersFail } from './components/marketing/WhyOthersFail';
 import { WriteScanRunFlow } from './components/marketing/WriteScanRunFlow';
-import { CompetitiveMatrix } from './components/marketing/CompetitiveMatrix';
 import { Footer } from './components/marketing/Footer';
 import { PublicRoadmapsPage } from './components/public/PublicRoadmapsPage';
 import { PublicCoursesPage } from './components/public/PublicCoursesPage';
@@ -151,10 +150,6 @@ export const App: React.FC = () => {
                       <section id="how-it-works">
                         <WriteScanRunFlow onOpenAuth={handleOpenAuth} />
                       </section>
-
-                      <section id="comparison">
-                        <CompetitiveMatrix />
-                      </section>
                     </div>
                   )}
                 </div>
@@ -231,12 +226,10 @@ export const App: React.FC = () => {
                 <div>
                   {currentView === 'public_blogs' ? (
                     <PublicBlogsPage onOpenAuth={handleOpenAuth} />
-                  ) : currentView === 'admin_cms' ? (
-                    <AdminDashboard initialTab="cms" />
-                  ) : currentView === 'admin_moderators' ? (
-                    <AdminDashboard initialTab="moderators" />
-                  ) : currentView === 'admin_institutions' ? (
-                    <AdminDashboard initialTab="institutions" />
+                  ) : currentView === 'public_roadmaps' ? (
+                    <PublicRoadmapsPage onOpenAuth={handleOpenAuth} />
+                  ) : currentView === 'public_courses' ? (
+                    <PublicCoursesPage onOpenAuth={handleOpenAuth} />
                   ) : (
                     <AdminDashboard initialTab="vitals" />
                   )}

@@ -64,11 +64,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [password, setPassword] = useState('');
   const [school, setSchool] = useState('');
   const [division, setDivision] = useState('Chittagong');
-  
-  // Admin & Moderator Portal Expansion
-  const [showAdminPortal, setShowAdminPortal] = useState(false);
-  const [adminEmail, setAdminEmail] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
 
   const [statusMessage, setStatusMessage] = useState<{ success?: boolean; message?: string } | null>(null);
 
@@ -79,14 +74,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     if (!email.trim()) return;
 
     setStatusMessage({ success: false, message: 'Verifying credentials...' });
-    const res = await login(email, password, selectedRole);
+    const res = await login(email, password);
     setStatusMessage(res);
     if (res.success) {
       confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
       setTimeout(() => {
         onClose();
         setStatusMessage(null);
-      }, 1000);
+      }, 800);
     }
   };
 
@@ -148,22 +143,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  const handleAdminSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!adminEmail.trim()) return;
-
-    setStatusMessage({ success: false, message: 'Authenticating with Admin HQ...' });
-    const res = await login(adminEmail, adminPassword, 'admin');
-    setStatusMessage(res);
-    if (res.success) {
-      confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
-      setTimeout(() => {
-        onClose();
-        setStatusMessage(null);
-      }, 1000);
-    }
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/70 backdrop-blur-sm animate-fadeIn overflow-y-auto">
       <div className="relative w-full max-w-lg bg-paper-card border-2 border-ink rounded-[28px] p-6 sm:p-8 shadow-solid-xl max-h-[92vh] overflow-y-auto space-y-5">
@@ -195,22 +174,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         <div className="grid grid-cols-2 gap-1.5 p-1.5 bg-paper-muted border-2 border-ink/30 rounded-2xl text-xs font-extrabold">
           <button
             type="button"
-            onClick={() => { setAuthMode('signin'); setStatusMessage(null); setShowAdminPortal(false); }}
-            className={'py-2.5 px-3 rounded-xl transition-all text-center font-extrabold ' + (authMode === 'signin' && !showAdminPortal ? 'bg-highlighter text-ink border-2 border-ink shadow-solid-xs' : 'text-graphite hover:text-ink')}
+            onClick={() => { setAuthMode('signin'); setStatusMessage(null); }}
+            className={'py-2.5 px-3 rounded-xl transition-all text-center font-extrabold ' + (authMode === 'signin' ? 'bg-highlighter text-ink border-2 border-ink shadow-solid-xs' : 'text-graphite hover:text-ink')}
           >
             Sign In
           </button>
           <button
             type="button"
-            onClick={() => { setAuthMode('signup'); setStatusMessage(null); setShowAdminPortal(false); }}
-            className={'py-2.5 px-3 rounded-xl transition-all text-center font-extrabold ' + (authMode === 'signup' && !showAdminPortal ? 'bg-highlighter text-ink border-2 border-ink shadow-solid-xs' : 'text-graphite hover:text-ink')}
+            onClick={() => { setAuthMode('signup'); setStatusMessage(null); }}
+            className={'py-2.5 px-3 rounded-xl transition-all text-center font-extrabold ' + (authMode === 'signup' ? 'bg-highlighter text-ink border-2 border-ink shadow-solid-xs' : 'text-graphite hover:text-ink')}
           >
             Sign Up (Free)
           </button>
         </div>
 
         {/* PUBLIC ROLE SELECTOR: STRICTLY FOR SIGN UP */}
-        {!showAdminPortal && authMode === 'signup' && (
+        {authMode === 'signup' && (
           <div className="space-y-1.5">
             <span className="text-[11px] font-mono font-extrabold text-graphite uppercase tracking-wider block">
               I am registering as:
@@ -248,27 +227,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         )}
 
         {/* SIGN IN WITH GOOGLE BUTTON */}
-        {!showAdminPortal && (
-          <div className="space-y-3 pt-1">
-            <button
-              type="button"
-              onClick={handleGoogleAuth}
-              className="w-full py-2.5 px-4 bg-white hover:bg-paper-light border-2 border-ink rounded-xl font-extrabold text-xs text-ink flex items-center justify-center gap-2.5 shadow-solid-xs btn-bounce transition-all"
-            >
-              <GoogleIcon />
-              <span>Continue with Google</span>
-            </button>
+        <div className="space-y-3 pt-1">
+          <button
+            type="button"
+            onClick={handleGoogleAuth}
+            className="w-full py-2.5 px-4 bg-white hover:bg-paper-light border-2 border-ink rounded-xl font-extrabold text-xs text-ink flex items-center justify-center gap-2.5 shadow-solid-xs btn-bounce transition-all"
+          >
+            <GoogleIcon />
+            <span>Continue with Google</span>
+          </button>
 
-            <div className="flex items-center space-x-3 text-[11px] font-mono text-graphite font-bold">
-              <div className="flex-1 border-t border-ink/20"></div>
-              <span>OR WITH EMAIL</span>
-              <div className="flex-1 border-t border-ink/20"></div>
-            </div>
+          <div className="flex items-center space-x-3 text-[11px] font-mono text-graphite font-bold">
+            <div className="flex-1 border-t border-ink/20"></div>
+            <span>OR WITH EMAIL</span>
+            <div className="flex-1 border-t border-ink/20"></div>
           </div>
-        )}
+        </div>
 
         {/* FORM 1: SIGN IN FORM (AUTOMATIC ROLE DETECTION) */}
-        {authMode === 'signin' && !showAdminPortal && (
+        {authMode === 'signin' && (
           <form onSubmit={handleSignIn} className="space-y-4 text-xs">
             <div className="space-y-1">
               <label className="font-extrabold text-ink block">Email Address:</label>
@@ -313,7 +290,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         )}
 
         {/* FORM 2: SIGN UP FORM (OPEN TO EVERYONE - NO RESTRICTIONS) */}
-        {authMode === 'signup' && !showAdminPortal && (
+        {authMode === 'signup' && (
           <form onSubmit={handleSignUp} className="space-y-3.5 text-xs">
             <div className="space-y-1">
               <label className="font-extrabold text-ink block">Full Name *</label>
@@ -405,110 +382,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </form>
         )}
 
-        {/* FORM 3: ADMIN & MODERATOR PORTAL LOGIN */}
-        {showAdminPortal && (
-          <form onSubmit={handleAdminSignIn} className="space-y-4 text-xs">
-            <div className="p-3.5 bg-paper-muted border-2 border-ink/30 rounded-2xl flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-stamp text-white flex items-center justify-center flex-shrink-0 font-extrabold text-lg shadow-solid-xs">
-                🛡️
-              </div>
-              <div>
-                <strong className="text-ink block text-xs sm:text-sm font-extrabold">PaperCode Admin & Governance HQ</strong>
-                <span className="text-[10px] text-graphite font-bold">Sign in with system administrator credentials</span>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="font-extrabold text-ink block">Admin Email Address *</label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-graphite absolute left-3 top-3" />
-                <input
-                  type="email"
-                  value={adminEmail}
-                  onChange={(e) => setAdminEmail(e.target.value)}
-                  placeholder="admin@papercode.edu.bd"
-                  className="w-full pl-9 pr-3 py-2.5 bg-white border-2 border-ink/30 rounded-xl font-bold text-ink"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="font-extrabold text-ink block">Admin Password *</label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-graphite absolute left-3 top-3" />
-                <input
-                  type="password"
-                  value={adminPassword}
-                  onChange={(e) => setAdminPassword(e.target.value)}
-                  placeholder="Enter admin password"
-                  className="w-full pl-9 pr-3 py-2.5 bg-white border-2 border-ink/30 rounded-xl font-bold text-ink"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Quick Demo Helper for Admin */}
-            <div className="p-3 bg-yellow-50 border border-ink/20 rounded-xl text-[11px] text-graphite space-y-1 font-mono">
-              <div className="flex justify-between items-center">
-                <span className="font-bold text-ink">🔑 Default Admin Credentials:</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAdminEmail('admin@papercode.edu.bd');
-                    setAdminPassword('Admin@PaperCode2026');
-                  }}
-                  className="px-2 py-0.5 bg-highlighter border border-ink rounded text-[10px] font-extrabold text-ink shadow-solid-xs hover:shadow-solid-sm"
-                >
-                  Autofill Credentials
-                </button>
-              </div>
-              <p className="text-[10px] text-graphite">
-                <strong>Email:</strong> admin@papercode.edu.bd | <strong>Password:</strong> Admin@PaperCode2026
-              </p>
-            </div>
-
-            <div className="flex gap-2 pt-1">
-              <PillButton
-                type="button"
-                variant="secondary"
-                size="md"
-                onClick={() => setShowAdminPortal(false)}
-              >
-                Back to Public
-              </PillButton>
-              <PillButton
-                type="submit"
-                variant="highlighter"
-                size="md"
-                className="flex-1 btn-bounce shadow-solid-xs"
-                icon={<ArrowRight className="w-4 h-4" />}
-              >
-                Sign In to Admin HQ ➔
-              </PillButton>
-            </div>
-          </form>
-        )}
-
         {/* Status Alert Banner */}
         {statusMessage && (
           <div className={'p-3 rounded-xl border-2 text-xs font-extrabold flex items-center space-x-2 ' + (statusMessage.success ? 'bg-green-100 text-green-900 border-green-700' : 'bg-red-100 text-red-900 border-red-700')}>
             {statusMessage.success ? <CheckCircle className="w-4 h-4 text-green-700 stroke-[3]" /> : <X className="w-4 h-4 text-red-700 stroke-[3]" />}
             <span>{statusMessage.message}</span>
-          </div>
-        )}
-
-        {/* Discreet Admin & Moderator Access Link */}
-        {!showAdminPortal && (
-          <div className="pt-3 border-t border-ink/15 text-center">
-            <button
-              type="button"
-              onClick={() => setShowAdminPortal(true)}
-              className="text-[11px] font-mono text-graphite hover:text-ink font-bold hover:underline inline-flex items-center gap-1"
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-stamp" />
-              <span>Admin & Moderator Portal</span>
-            </button>
           </div>
         )}
 

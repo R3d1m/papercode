@@ -121,10 +121,9 @@ export const TopNav: React.FC<TopNavProps> = ({
 
     if (activeMode === 'admin') {
       return [
-        { label: 'Vitals', action: () => { setMobileMenuOpen(false); setCurrentView('admin_vitals'); }, active: currentView === 'admin_vitals' },
-        { label: 'Curriculum', action: () => { setMobileMenuOpen(false); setCurrentView('admin_cms'); }, active: currentView === 'admin_cms' },
-        { label: 'Moderators', action: () => { setMobileMenuOpen(false); setCurrentView('admin_moderators'); }, active: currentView === 'admin_moderators' },
-        { label: 'Institutions', action: () => { setMobileMenuOpen(false); setCurrentView('admin_institutions'); }, active: currentView === 'admin_institutions' },
+        { label: 'Vitals & Stats', action: () => { setMobileMenuOpen(false); setCurrentView('admin_vitals'); }, active: currentView === 'admin_vitals' || currentView === 'admin_dashboard' },
+        { label: 'Roadmaps', action: () => { setMobileMenuOpen(false); setCurrentView('public_roadmaps'); }, active: currentView === 'public_roadmaps' },
+        { label: 'Courses', action: () => { setMobileMenuOpen(false); setCurrentView('public_courses'); }, active: currentView === 'public_courses' },
         { label: 'Blogs', action: () => { setMobileMenuOpen(false); setCurrentView('public_blogs'); }, active: currentView === 'public_blogs' },
       ];
     }
