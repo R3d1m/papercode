@@ -28,11 +28,13 @@ import {
 import confetti from 'canvas-confetti';
 
 export const CourseBuilder: React.FC = () => {
-  const { courses, addCourse, addModuleToCourse, updateLesson, deleteLesson } = useApp();
+  const { courses, addCourse, addModuleToCourse, updateLesson, deleteLesson, currentUser } = useApp();
+
+  const myCourses = courses.filter(c => c.authorId === currentUser.id);
 
   // Navigation hierarchy state:
   const [step, setStep] = useState<'courses_list' | 'course_detail' | 'create_course' | 'create_module' | 'create_lesson'>('courses_list');
-  const [selectedCourseId, setSelectedCourseId] = useState<string>(courses[0]?.id || '');
+  const [selectedCourseId, setSelectedCourseId] = useState<string>(myCourses[0]?.id || courses[0]?.id || '');
   const [selectedModuleId, setSelectedModuleId] = useState<string>('');
   
   const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
@@ -447,58 +449,83 @@ export const CourseBuilder: React.FC = () => {
             </PillButton>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {courses.map((course) => (
-              <BentoCard
-                key={course.id}
-                variant="white"
-                className="space-y-5 p-8 border-2 border-ink shadow-solid-md flex flex-col justify-between"
-              >
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="px-3 py-1 bg-paper-muted border border-ink/30 rounded-full font-mono text-xs font-bold text-ink">
-                      {course.category} • {course.level}
-                    </span>
-                    <span className="text-xs font-mono font-extrabold text-stamp">
-                      {(course.modules || []).length} Modules
-                    </span>
+          {myCourses.length === 0 ? (
+            <div className="p-10 sm:p-14 bg-paper-card border-2 border-ink rounded-2xl text-center space-y-4 shadow-solid-xs max-w-2xl mx-auto">
+              <div className="w-14 h-14 rounded-2xl bg-stamp text-white border-2 border-ink flex items-center justify-center mx-auto shadow-solid-xs text-2xl">
+                📚
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-xl font-extrabold text-ink">You haven&apos;t created any courses yet</h3>
+                <p className="text-xs sm:text-sm text-graphite font-medium">
+                  Create your custom curriculum course, organize it into modules, and author interactive handwritten exercises with automated grading.
+                </p>
+              </div>
+              <div className="pt-2">
+                <PillButton
+                  variant="stamp"
+                  size="md"
+                  onClick={() => setStep('create_course')}
+                  className="btn-bounce shadow-solid-xs"
+                  icon={<Plus className="w-4 h-4" />}
+                >
+                  + Add Your First Course
+                </PillButton>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {myCourses.map((course) => (
+                <BentoCard
+                  key={course.id}
+                  variant="white"
+                  className="space-y-5 p-8 border-2 border-ink shadow-solid-md flex flex-col justify-between"
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="px-3 py-1 bg-paper-muted border border-ink/30 rounded-full font-mono text-xs font-bold text-ink">
+                        {course.category} • {course.level}
+                      </span>
+                      <span className="text-xs font-mono font-extrabold text-stamp">
+                        {(course.modules || []).length} Modules
+                      </span>
+                    </div>
+
+                    <div>
+                      <h3 className="text-2xl font-extrabold text-ink">{course.title}</h3>
+                      <p className="text-xs sm:text-sm text-graphite mt-1 leading-relaxed">
+                        {course.description}
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5 pt-2 border-t border-ink/15 text-xs text-graphite">
+                      <strong className="text-ink block">Modules inside this course:</strong>
+                      {(course.modules || []).map((m) => (
+                        <div key={m.id} className="flex items-center space-x-2">
+                          <span className="font-mono font-bold text-stamp">•</span>
+                          <span>{m.title} ({(m.lessons || []).length} lessons)</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
-                  <div>
-                    <h3 className="text-2xl font-extrabold text-ink">{course.title}</h3>
-                    <p className="text-xs sm:text-sm text-graphite mt-1 leading-relaxed">
-                      {course.description}
-                    </p>
+                  <div className="pt-4 border-t border-ink/15 flex items-center justify-end">
+                    <PillButton
+                      variant="highlighter"
+                      size="md"
+                      onClick={() => {
+                        setSelectedCourseId(course.id);
+                        setStep('course_detail');
+                      }}
+                      className="btn-bounce"
+                      icon={<ChevronRight className="w-4 h-4" />}
+                    >
+                      Manage & Edit Lessons ➔
+                    </PillButton>
                   </div>
-
-                  <div className="space-y-1.5 pt-2 border-t border-ink/15 text-xs text-graphite">
-                    <strong className="text-ink block">Modules inside this course:</strong>
-                    {(course.modules || []).map((m) => (
-                      <div key={m.id} className="flex items-center space-x-2">
-                        <span className="font-mono font-bold text-stamp">•</span>
-                        <span>{m.title} ({(m.lessons || []).length} lessons)</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-ink/15 flex items-center justify-end">
-                  <PillButton
-                    variant="highlighter"
-                    size="md"
-                    onClick={() => {
-                      setSelectedCourseId(course.id);
-                      setStep('course_detail');
-                    }}
-                    className="btn-bounce"
-                    icon={<ChevronRight className="w-4 h-4" />}
-                  >
-                    Manage & Edit Lessons ➔
-                  </PillButton>
-                </div>
-              </BentoCard>
-            ))}
-          </div>
+                </BentoCard>
+              ))}
+            </div>
+          )}
 
         </div>
       )}

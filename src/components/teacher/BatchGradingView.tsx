@@ -21,21 +21,25 @@ import {
 } from 'lucide-react';
 
 export const BatchGradingView: React.FC = () => {
-  const { submissions, classrooms, courses, updateSubmissionGrade, applyBatchCurve } = useApp();
+  const { submissions, classrooms, courses, updateSubmissionGrade, applyBatchCurve, currentUser } = useApp();
   const [selectedClassroomId, setSelectedClassroomId] = useState<string>('all');
   const [activeSubmissionForReview, setActiveSubmissionForReview] = useState<Submission | null>(null);
   const [curvePercentage, setCurvePercentage] = useState<number>(5);
 
-  const selectedClassroom: Classroom | undefined = classrooms.find(c => c.id === selectedClassroomId);
+  const teacherClassrooms = classrooms.filter(c => c.teacherId === currentUser.id);
+  const teacherClassroomIds = new Set(teacherClassrooms.map(c => c.id));
+  const teacherSubmissions = submissions.filter(s => s.classroomId && teacherClassroomIds.has(s.classroomId));
+
+  const selectedClassroom: Classroom | undefined = teacherClassrooms.find(c => c.id === selectedClassroomId);
 
   const filteredSubmissions = selectedClassroomId === 'all' 
-    ? submissions 
-    : submissions.filter(s => s.classroomId === selectedClassroomId);
+    ? teacherSubmissions 
+    : teacherSubmissions.filter(s => s.classroomId === selectedClassroomId);
 
   const handleExportCSV = () => {
     const headers = 'ID,Student Name,School,Classroom,Exercise,Submission Type,OCR Confidence,Score,Max Score,Status\n';
     const rows = filteredSubmissions.map(s => {
-      const cls = classrooms.find(c => c.id === s.classroomId);
+      const cls = teacherClassrooms.find(c => c.id === s.classroomId);
       return `"${s.id}","${s.studentName}","${s.studentSchool}","${cls?.name || 'Classroom'}","${s.exerciseTitle}","${s.submissionType}","${s.ocrConfidence || 'N/A'}%","${s.score}","${s.maxScore}","${s.status}"`;
     }).join('\n');
 
@@ -96,56 +100,62 @@ export const BatchGradingView: React.FC = () => {
       </div>
 
       {/* 2. CLASSROOM SELECTOR TILES (SHOW CLASSROOMS CLEARLY) */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-mono font-extrabold uppercase text-graphite tracking-wider flex items-center gap-1.5">
-            <Users className="w-4 h-4 text-stamp" />
-            <span>Select Classroom to Inspect Answers ({classrooms.length} Active Classes)</span>
-          </span>
-          {selectedClassroomId !== 'all' && (
-            <button
-              onClick={() => setSelectedClassroomId('all')}
-              className="text-xs font-extrabold text-stamp underline hover:text-stamp-dark"
-            >
-              View All Classrooms Combined
-            </button>
-          )}
+      {teacherClassrooms.length === 0 ? (
+        <div className="p-10 bg-paper-card border-2 border-ink rounded-2xl text-center space-y-3 shadow-solid-xs">
+          <p className="text-sm font-extrabold text-ink">You haven&apos;t created any classrooms yet.</p>
+          <p className="text-xs text-graphite font-medium">Create a classroom from your Classrooms workspace to receive and batch grade student homework.</p>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          
-          {/* Option A: All Classrooms Pill */}
-          <div
-            onClick={() => setSelectedClassroomId('all')}
-            className={`p-5 rounded-2xl border-2 cursor-pointer transition-all btn-bounce flex flex-col justify-between space-y-3 ${selectedClassroomId === 'all' ? 'bg-highlighter border-ink shadow-solid-md' : 'bg-paper-card border-ink/30 hover:border-ink shadow-solid-xs'}`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="px-2.5 py-0.5 bg-paper-light border border-ink/30 rounded-full font-mono text-[10px] font-extrabold text-ink">
-                All Classes Combined
-              </span>
-              <span className="font-mono text-xs font-extrabold text-ink">
-                {submissions.length} Answers
-              </span>
-            </div>
-
-            <div>
-              <h3 className="font-extrabold text-base text-ink">All Enrolled Classrooms</h3>
-              <p className="text-xs text-graphite font-medium mt-0.5">
-                Overview across all {classrooms.length} batches and {classrooms.reduce((acc, c) => acc + c.roster.length, 0)} students.
-              </p>
-            </div>
-
-            <div className="pt-2 border-t border-ink/20 flex items-center justify-between text-xs font-extrabold text-ink">
-              <span>{classrooms.length} Classrooms Active</span>
-              <span>{selectedClassroomId === 'all' ? '● Active View' : 'Click to Filter ➔'}</span>
-            </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-mono font-extrabold uppercase text-graphite tracking-wider flex items-center gap-1.5">
+              <Users className="w-4 h-4 text-stamp" />
+              <span>Select Classroom to Inspect Answers ({teacherClassrooms.length} Active Classes)</span>
+            </span>
+            {selectedClassroomId !== 'all' && (
+              <button
+                onClick={() => setSelectedClassroomId('all')}
+                className="text-xs font-extrabold text-stamp underline hover:text-stamp-dark"
+              >
+                View All Classrooms Combined
+              </button>
+            )}
           </div>
 
-          {/* Option B: Individual Classrooms */}
-          {classrooms.map((cls) => {
-            const clsSubmissions = submissions.filter(s => s.classroomId === cls.id);
-            const isSelected = selectedClassroomId === cls.id;
-            const assignedCourses = courses.filter(c => (cls.courseIds || []).includes(c.id));
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            
+            {/* Option A: All Classrooms Pill */}
+            <div
+              onClick={() => setSelectedClassroomId('all')}
+              className={`p-5 rounded-2xl border-2 cursor-pointer transition-all btn-bounce flex flex-col justify-between space-y-3 ${selectedClassroomId === 'all' ? 'bg-highlighter border-ink shadow-solid-md' : 'bg-paper-card border-ink/30 hover:border-ink shadow-solid-xs'}`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="px-2.5 py-0.5 bg-paper-light border border-ink/30 rounded-full font-mono text-[10px] font-extrabold text-ink">
+                  All Classes Combined
+                </span>
+                <span className="font-mono text-xs font-extrabold text-ink">
+                  {teacherSubmissions.length} Answers
+                </span>
+              </div>
+
+              <div>
+                <h3 className="font-extrabold text-base text-ink">All Enrolled Classrooms</h3>
+                <p className="text-xs text-graphite font-medium mt-0.5">
+                  Overview across all {teacherClassrooms.length} batches and {teacherClassrooms.reduce((acc, c) => acc + (c.roster?.length || 0), 0)} students.
+                </p>
+              </div>
+
+              <div className="pt-2 border-t border-ink/20 flex items-center justify-between text-xs font-extrabold text-ink">
+                <span>{teacherClassrooms.length} Classrooms Active</span>
+                <span>{selectedClassroomId === 'all' ? '● Active View' : 'Click to Filter ➔'}</span>
+              </div>
+            </div>
+
+            {/* Option B: Individual Classrooms */}
+            {teacherClassrooms.map((cls) => {
+              const clsSubmissions = teacherSubmissions.filter(s => s.classroomId === cls.id);
+              const isSelected = selectedClassroomId === cls.id;
+              const assignedCourses = courses.filter(c => (cls.courseIds || []).includes(c.id));
 
             return (
               <div
@@ -178,6 +188,7 @@ export const BatchGradingView: React.FC = () => {
           })}
         </div>
       </div>
+    )}
 
       {/* 3. SUBMISSIONS TABLE (TYPE-AWARE BUTTONS: REVIEW PHOTO vs REVIEW CODE) */}
       <div className="border-2 border-ink bg-paper-card rounded-bento overflow-hidden shadow-solid-md space-y-0">

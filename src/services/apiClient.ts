@@ -63,17 +63,71 @@ export const apiClient = {
     }
   },
 
-  async login(email: string, role?: string) {
+  async login(email: string, password?: string, role?: string) {
     try {
       const res = await fetch(API_BASE + '/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, role })
+        body: JSON.stringify({ email, password, role })
       });
       return await res.json();
-    } catch (e) {
-      return { success: true, message: 'Signed in.' };
+    } catch (e: any) {
+      return { success: false, message: 'Unable to reach backend server. Please try again.' };
     }
+  },
+
+  async getCourses() {
+    try {
+      const res = await fetch(API_BASE + '/courses');
+      if (res.ok) return await res.json();
+    } catch (e) {}
+    return { success: false, courses: [] };
+  },
+
+  async createCourse(data: any) {
+    try {
+      const res = await fetch(API_BASE + '/courses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {}
+    return { success: false };
+  },
+
+  async createModule(courseId: string, data: any) {
+    try {
+      const res = await fetch(API_BASE + '/courses/' + courseId + '/modules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {}
+    return { success: false };
+  },
+
+  async createLesson(courseId: string, moduleId: string, data: any) {
+    try {
+      const res = await fetch(API_BASE + '/courses/' + courseId + '/modules/' + moduleId + '/lessons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {}
+    return { success: false };
+  },
+
+  async deleteCourse(courseId: string) {
+    try {
+      const res = await fetch(API_BASE + '/courses/' + courseId, {
+        method: 'DELETE'
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {}
+    return { success: false };
   },
 
   async getClassrooms() {

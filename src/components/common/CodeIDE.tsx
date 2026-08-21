@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { executeCodeOnJudge0, LANGUAGE_IDS } from '../../services/judge0';
 import { Judge0ExecutionResult } from '../../types';
 import { Play, RotateCcw, Sparkles, Terminal, Copy, Check, FileCode } from 'lucide-react';
@@ -40,6 +40,12 @@ for m in student_marks:
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [executionResult, setExecutionResult] = useState<Judge0ExecutionResult | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (initialCode !== undefined) {
+      setCode(initialCode);
+    }
+  }, [initialCode]);
 
   const handleRun = async () => {
     setIsRunning(true);

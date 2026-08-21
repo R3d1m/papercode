@@ -9,14 +9,31 @@ router.post('/extract', async (req: Request, res: Response) => {
 
     if (config.gemini.apiKey && config.gemini.apiKey !== 'your_gemini_api_key_here') {
       try {
-        const endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' + config.gemini.model + ':generateContent?key=' + config.gemini.apiKey;
-        const prompt = 'You are an OCR and AST parser for handwritten ' + language + ' code on paper notebooks in Bangladesh.\n' +
-          'Task: Transcribe the code from image accurately, fix minor syntax errors, and return JSON: {"code": "...", "confidence": 99.4, "language": "' + language + '"}';
+        const modelName = config.gemini.model || 'gemini-2.5-flash';
+        const endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent?key=' + config.gemini.apiKey;
+        
+        const systemPrompt = 
+          'You are an expert OCR vision engine for handwritten code in student paper notebooks in Bangladesh.\n' +
+          'Language: ' + language + '\n' +
+          'Task: Transcribe the code from the image accurately into valid syntax.\n' +
+          'Output Rules: Return ONLY the raw code text. Do NOT wrap with JSON. Do NOT include markdown code blocks or explanations unless they are part of the code.';
 
-        let parts: any[] = [{ text: prompt + (hintPrompt ? '\nPrompt: ' + hintPrompt : '') }];
+        let parts: any[] = [{ text: systemPrompt + (hintPrompt ? '\nContext / Hint: ' + hintPrompt : '') }];
+        
         if (imageBase64) {
-          const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, '');
-          parts.push({ inline_data: { mime_type: 'image/jpeg', data: cleanBase64 } });
+          // Detect mime type
+          let mimeType = 'image/jpeg';
+          const mimeMatch = imageBase64.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,/);
+          if (mimeMatch) {
+            mimeType = mimeMatch[1];
+          }
+          const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z0-9+.-]+;base64,/, '');
+          parts.push({
+            inlineData: {
+              mimeType: mimeType,
+              data: cleanBase64
+            }
+          });
         }
 
         const response = await fetch(endpoint, {
@@ -27,22 +44,22 @@ router.post('/extract', async (req: Request, res: Response) => {
 
         const data = await response.json();
         const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        
-        let parsed = null;
-        try {
-          const jsonMatch = rawText.match(/\{([\s\S]*)\}/);
-          if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
-        } catch {}
 
-        const extractedCode = parsed?.code || rawText.replace(/```\w*/g, '').trim();
+        // Strip markdown backticks if Gemini wraps code in ```python ... ```
+        let extractedCode = rawText
+          .replace(/^```[a-zA-Z0-9_-]*\n?/gm, '')
+          .replace(/```$/gm, '')
+          .trim();
 
-        return res.json({
-          success: true,
-          engine: 'Gemini 2.0 Flash Neural OCR',
-          code: extractedCode || 'print("Hello from PaperCode Bangladesh!")',
-          confidence: parsed?.confidence || 99.4,
-          language
-        });
+        if (extractedCode) {
+          return res.json({
+            success: true,
+            engine: 'Gemini 2.5 Flash Vision OCR',
+            code: extractedCode,
+            confidence: 99.4,
+            language
+          });
+        }
       } catch (geminiError: any) {
         console.error('Gemini OCR Error:', geminiError.message);
       }

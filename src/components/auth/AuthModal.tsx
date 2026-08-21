@@ -74,11 +74,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSignIn = (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
 
-    const res = login(email, selectedRole);
+    setStatusMessage({ success: false, message: 'Verifying credentials...' });
+    const res = await login(email, password, selectedRole);
     setStatusMessage(res);
     if (res.success) {
       confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
@@ -89,14 +90,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  const handleSignUp = (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !email.trim()) return;
 
-    // Open registration for anyone - default to school or independent learner
-    const res = signup({
+    setStatusMessage({ success: false, message: 'Creating account in database...' });
+    const res = await signup({
       name,
       email,
+      password,
       role: selectedRole,
       school: school || (selectedRole === 'teacher' ? 'Independent Educator / School' : 'Independent Learner'),
       division
@@ -112,41 +114,46 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  const handleGoogleAuth = () => {
-    // Smooth Google OAuth mock for future configuration
+  const handleGoogleAuth = async () => {
     const mockEmail = selectedRole === 'teacher' ? 'teacher.demo@gmail.com' : 'student.learner@gmail.com';
     const mockName = selectedRole === 'teacher' ? 'Google Teacher User' : 'Google Student User';
     
     if (authMode === 'signin') {
-      const res = login(mockEmail, selectedRole);
-      setStatusMessage({ success: true, message: 'Signed in with Google (' + mockEmail + ')' });
-      confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
-      setTimeout(() => {
-        onClose();
-        setStatusMessage(null);
-      }, 1000);
+      const res = await login(mockEmail, 'default_pass_123', selectedRole);
+      setStatusMessage(res);
+      if (res.success) {
+        confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
+        setTimeout(() => {
+          onClose();
+          setStatusMessage(null);
+        }, 1000);
+      }
     } else {
-      const res = signup({
+      const res = await signup({
         name: mockName,
         email: mockEmail,
+        password: 'default_pass_123',
         role: selectedRole,
         school: 'Google Auth Learner',
         division: 'Dhaka'
       });
-      setStatusMessage({ success: true, message: 'Google account linked successfully!' });
-      confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
-      setTimeout(() => {
-        onClose();
-        setStatusMessage(null);
-      }, 1000);
+      setStatusMessage(res);
+      if (res.success) {
+        confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
+        setTimeout(() => {
+          onClose();
+          setStatusMessage(null);
+        }, 1000);
+      }
     }
   };
 
-  const handleAdminSignIn = (e: React.FormEvent) => {
+  const handleAdminSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!adminEmail.trim()) return;
 
-    const res = login(adminEmail, 'admin');
+    setStatusMessage({ success: false, message: 'Authenticating with Admin HQ...' });
+    const res = await login(adminEmail, adminPassword, 'admin');
     setStatusMessage(res);
     if (res.success) {
       confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
@@ -202,8 +209,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </button>
         </div>
 
-        {/* PUBLIC ROLE SELECTOR: STRICTLY STUDENT & TEACHER */}
-        {!showAdminPortal && (
+        {/* PUBLIC ROLE SELECTOR: STRICTLY FOR SIGN UP */}
+        {!showAdminPortal && authMode === 'signup' && (
           <div className="space-y-1.5">
             <span className="text-[11px] font-mono font-extrabold text-graphite uppercase tracking-wider block">
               I am registering as:
@@ -260,18 +267,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
         )}
 
-        {/* FORM 1: SIGN IN FORM */}
+        {/* FORM 1: SIGN IN FORM (AUTOMATIC ROLE DETECTION) */}
         {authMode === 'signin' && !showAdminPortal && (
           <form onSubmit={handleSignIn} className="space-y-4 text-xs">
             <div className="space-y-1">
-              <label className="font-extrabold text-ink block">Email Address or Username:</label>
+              <label className="font-extrabold text-ink block">Email Address:</label>
               <div className="relative">
                 <Mail className="w-4 h-4 text-graphite absolute left-3 top-3" />
                 <input
-                  type="text"
+                  type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder={selectedRole === 'teacher' ? 'nusrat.jahan@cuet.ac.bd' : 'tanvir@collegiate.edu.bd'}
+                  placeholder="name@example.com"
                   className="w-full pl-9 pr-3 py-2.5 bg-white border-2 border-ink/30 rounded-xl focus:outline-none focus:border-ink font-bold text-ink"
                   required
                 />
@@ -288,38 +295,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   className="w-full pl-9 pr-3 py-2.5 bg-white border-2 border-ink/30 rounded-xl focus:outline-none focus:border-ink font-bold text-ink"
+                  required
                 />
               </div>
             </div>
 
-            {/* Quick Demo Logins Helper */}
-            <div className="p-3 bg-paper-light border border-ink/20 rounded-xl text-[11px] text-graphite space-y-1 font-mono">
-              <span className="font-bold text-ink block">💡 Quick One-Click Demo Sign In:</span>
-              <div className="flex flex-wrap gap-2 pt-0.5">
-                <button
-                  type="button"
-                  onClick={() => { setSelectedRole('student'); setEmail('tanvir@collegiate.edu.bd'); }}
-                  className="px-2 py-0.5 bg-highlighter border border-ink rounded text-[10px] text-ink font-extrabold"
-                >
-                  Student (Tanvir)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setSelectedRole('teacher'); setEmail('nusrat.jahan@cuet.ac.bd'); }}
-                  className="px-2 py-0.5 bg-stamp text-white border border-ink rounded text-[10px] font-extrabold"
-                >
-                  Teacher (Nusrat)
-                </button>
-              </div>
-            </div>
-
             <PillButton
-              variant={selectedRole === 'teacher' ? 'stamp' : 'highlighter'}
+              variant="highlighter"
               size="lg"
-              className="w-full btn-bounce"
+              className="w-full btn-bounce shadow-solid-xs"
               icon={<ArrowRight className="w-4 h-4" />}
             >
-              Sign In as {selectedRole === 'teacher' ? 'Teacher' : 'Student'} ➔
+              Sign In to PaperCode ➔
             </PillButton>
           </form>
         )}

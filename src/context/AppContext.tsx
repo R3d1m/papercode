@@ -20,8 +20,8 @@ interface AppContextType {
   currentRole: Role;
   currentUser: User;
   switchRole: (role: Role) => void;
-  login: (email: string, role?: Role) => { success: boolean; message: string; user?: User };
-  signup: (userData: { name: string; email: string; role: Role; school?: string; division?: string }) => { success: boolean; message: string; user?: User };
+  login: (email: string, password?: string, role?: Role) => Promise<{ success: boolean; message: string; user?: User }>;
+  signup: (userData: { name: string; email: string; password?: string; role: Role; school?: string; division?: string }) => Promise<{ success: boolean; message: string; user?: User }>;
   logout: () => void;
   users: User[];
   moderators: User[];
@@ -71,10 +71,32 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+const getSavedUser = (): User => {
+  try {
+    const saved = localStorage.getItem('papercode_user_session');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.email) return parsed;
+    }
+  } catch (e) {}
+  return CURRENT_STUDENT;
+};
+
+const getSavedMode = (): 'marketing' | 'student' | 'teacher' | 'moderator' | 'admin' => {
+  try {
+    const saved = localStorage.getItem('papercode_user_session');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.role) return parsed.role;
+    }
+  } catch (e) {}
+  return 'marketing';
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [activeMode, setActiveMode] = useState<'marketing' | 'student' | 'teacher' | 'moderator' | 'admin'>('marketing');
-  const [currentRole, setCurrentRole] = useState<Role>('student');
-  const [currentUser, setCurrentUser] = useState<User>(CURRENT_STUDENT);
+  const [activeMode, setActiveMode] = useState<'marketing' | 'student' | 'teacher' | 'moderator' | 'admin'>(getSavedMode);
+  const [currentRole, setCurrentRole] = useState<Role>(() => getSavedUser().role || 'student');
+  const [currentUser, setCurrentUser] = useState<User>(getSavedUser);
   
   const [users, setUsers] = useState<User[]>(SEED_USERS);
   const [moderators, setModerators] = useState<User[]>(SEED_MODERATORS);
@@ -115,6 +137,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }).catch(e => {
       console.warn('Classroom sync skipped:', e);
     });
+
+    // Sync courses from backend on mount
+    apiClient.getCourses().then(res => {
+      if (res && res.courses && Array.isArray(res.courses) && res.courses.length > 0) {
+        setCourses(prev => {
+          const ids = new Set(prev.map(c => c.id));
+          const newCourses = res.courses.filter((c: any) => !ids.has(c.id));
+          return [...newCourses, ...prev];
+        });
+      }
+    }).catch(() => {});
   }, []);
 
   const allOrderedLessons: Lesson[] = courses.flatMap(c => (c.modules || []).flatMap(m => m.lessons || []));
@@ -151,64 +184,66 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const login = (email: string, role?: Role) => {
+  const login = async (email: string, password?: string, role?: Role) => {
     const formattedEmail = email.trim().toLowerCase();
     
-    // Call backend API
-    apiClient.login(formattedEmail, role);
+    // Call backend PostgreSQL API
+    const res = await apiClient.login(formattedEmail, password, role);
 
-    if (formattedEmail.includes('admin') || formattedEmail === CURRENT_ADMIN.email.toLowerCase()) {
-      setCurrentUser(CURRENT_ADMIN);
-      setCurrentRole('admin');
-      setActiveMode('admin');
-      return { success: true, message: 'Logged in as Admin HQ', user: CURRENT_ADMIN };
+    if (!res || !res.success) {
+      return { 
+        success: false, 
+        message: res?.message || 'Invalid email or password. Please check your credentials or click Sign Up.' 
+      };
     }
 
-    const matchedUser = users.find(u => u.email.toLowerCase() === formattedEmail);
-    if (matchedUser) {
-      setCurrentUser(matchedUser);
-      setCurrentRole(matchedUser.role);
-      setActiveMode(matchedUser.role);
-      setStudentXp(matchedUser.xp);
-      setStudentStreak(matchedUser.streak);
-      console.log('Existing user found:', matchedUser);
-      return { success: true, message: 'Welcome back, ' + matchedUser.name + '!', user: matchedUser };
-    }
-
-    // Default clean user session (0 courses, 0 classrooms)
-    const freshUser: User = {
-      id: 'usr-' + Date.now(),
-      name: formattedEmail.split('@')[0].replace('.', ' '),
-      email: formattedEmail,
-      role: role || 'student',
-      school: 'Independent Learner',
-      division: 'Dhaka',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-      xp: 0,
-      streak: 0,
-      completedLessons: [],
-      enrolledClassroomIds: [],
-      enrolledRoadmapIds: [],
+    const authUser: User = {
+      id: res.user.id,
+      name: res.user.name,
+      email: res.user.email,
+      role: res.user.role,
+      school: res.user.school || 'Independent Learner',
+      division: res.user.division || 'Dhaka',
+      avatar: res.user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      xp: res.user.xp || 0,
+      streak: res.user.streak || 0,
+      completedLessons: res.user.completedLessons || [],
+      enrolledClassroomIds: res.user.enrolledClassroomIds || [],
+      enrolledRoadmapIds: res.user.enrolledRoadmapIds || [],
+      permissions: res.user.permissions,
       joinedAt: new Date().toISOString().slice(0, 10)
     };
 
-    setUsers(prev => [freshUser, ...prev]);
-    setCurrentUser(freshUser);
-    setCurrentRole(freshUser.role);
-    setActiveMode(freshUser.role);
-    setStudentXp(0);
-    setStudentStreak(0);
+    setCurrentUser(authUser);
+    setCurrentRole(authUser.role);
+    setActiveMode(authUser.role);
+    setStudentXp(authUser.xp);
+    setStudentStreak(authUser.streak);
 
-    return { success: true, message: 'Signed in successfully!', user: freshUser };
+    try {
+      localStorage.setItem('papercode_user_session', JSON.stringify(authUser));
+    } catch (e) {}
+
+    return { 
+      success: true, 
+      message: res.message || ('Welcome back, ' + authUser.name + '!'), 
+      user: authUser 
+    };
   };
 
-  const signup = (userData: { name: string; email: string; role: Role; school?: string; division?: string }) => {
+  const signup = async (userData: { name: string; email: string; password?: string; role: Role; school?: string; division?: string }) => {
     // Send to backend API
-    apiClient.signup(userData);
+    const res = await apiClient.signup(userData);
 
-    // Clean initial state: 0 XP, 0 streak, 0 pre-enrolled courses, 0 classrooms
+    if (!res || !res.success) {
+      return {
+        success: false,
+        message: res?.message || 'Error creating account. Email may already be registered.'
+      };
+    }
+
     const newUser: User = {
-      id: 'usr-' + Date.now(),
+      id: res.user?.id || ('usr-' + Date.now()),
       name: userData.name,
       email: userData.email,
       role: userData.role,
@@ -231,12 +266,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActiveMode(newUser.role);
     setStudentXp(0);
     setStudentStreak(0);
-    setCompletedLessonIds([]);
+
+    try {
+      localStorage.setItem('papercode_user_session', JSON.stringify(newUser));
+    } catch (e) {}
 
     return { success: true, message: 'Account created successfully for ' + newUser.name + '!', user: newUser };
   };
 
   const logout = () => {
+    try {
+      localStorage.removeItem('papercode_user_session');
+    } catch (e) {}
     setActiveMode('marketing');
     setCurrentRole('student');
     setCurrentUser(CURRENT_STUDENT);
@@ -478,6 +519,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addCourse = (course: Course) => {
+    apiClient.createCourse({
+      id: course.id,
+      title: course.title,
+      description: course.subtitle || course.description,
+      language: course.language || 'python',
+      level: course.level || 'Beginner',
+      authorId: currentUser.id,
+      authorName: currentUser.name
+    });
     setCourses(prev => [course, ...prev]);
   };
 
@@ -486,10 +536,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteCourse = (courseId: string) => {
+    apiClient.deleteCourse(courseId);
     setCourses(prev => prev.filter(c => c.id !== courseId));
   };
 
   const addModuleToCourse = (courseId: string, moduleData: any) => {
+    apiClient.createModule(courseId, {
+      title: moduleData.title,
+      description: moduleData.description,
+      sortOrder: (courses.find(c => c.id === courseId)?.modules?.length || 0) + 1
+    });
     setCourses(prev => prev.map(c => {
       if (c.id === courseId) {
         return {
@@ -502,6 +558,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateLesson = (courseId: string, moduleId: string, lessonId: string, updatedLesson: Lesson) => {
+    apiClient.createLesson(courseId, moduleId, {
+      id: updatedLesson.id,
+      title: updatedLesson.title,
+      subtitle: updatedLesson.subtitle,
+      theoryHtml: updatedLesson.theoryContent || '',
+      exercise: updatedLesson.exercise,
+      mcq: updatedLesson.mcq,
+      xpReward: updatedLesson.xpReward || 100
+    });
     setCourses(prev => prev.map(course => {
       if (course.id === courseId) {
         return {

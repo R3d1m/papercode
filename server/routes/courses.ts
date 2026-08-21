@@ -1,19 +1,216 @@
 import { Router, Request, Response } from 'express';
+import { pool } from '../db';
+
 const router = Router();
 
-let coursesDb = [
-  {
-    id: 'course-py-101',
-    title: 'Python 3 Foundations for ICT',
-    description: 'Master variables, arithmetic operations, conditionals, loops, and list structures on ruled paper.',
-    language: 'python',
-    level: 'Beginner',
-    author: 'Engr. Nusrat Jahan (CUET)'
-  }
-];
+// GET all courses with nested modules and lessons from PostgreSQL
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const coursesRes = await pool.query('SELECT * FROM courses ORDER BY created_at ASC');
+    const modulesRes = await pool.query('SELECT * FROM modules ORDER BY sort_order ASC, created_at ASC');
+    const lessonsRes = await pool.query('SELECT * FROM lessons ORDER BY sort_order ASC, created_at ASC');
 
-router.get('/', (req: Request, res: Response) => {
-  res.json({ success: true, courses: coursesDb });
+    const modulesByCourse: Record<string, any[]> = {};
+    for (const m of modulesRes.rows) {
+      if (!modulesByCourse[m.course_id]) modulesByCourse[m.course_id] = [];
+      modulesByCourse[m.course_id].push({
+        id: m.id,
+        courseId: m.course_id,
+        title: m.title,
+        description: m.description,
+        sortOrder: m.sort_order,
+        lessons: []
+      });
+    }
+
+    const lessonsByModule: Record<string, any[]> = {};
+    for (const l of lessonsRes.rows) {
+      if (!lessonsByModule[l.module_id]) lessonsByModule[l.module_id] = [];
+      lessonsByModule[l.module_id].push({
+        id: l.id,
+        moduleId: l.module_id,
+        title: l.title,
+        subtitle: l.subtitle,
+        theoryHtml: l.theory_html,
+        exercise: l.exercise_data || {
+          id: 'ex-' + l.id,
+          title: l.title,
+          prompt: l.subtitle || 'Complete this coding challenge on paper or in the IDE.',
+          language: 'python',
+          starterCode: 'print("Hello from PaperCode Bangladesh!")'
+        },
+        mcq: l.mcq_data || {
+          id: 'mcq-' + l.id,
+          question: 'What does this concept accomplish in programming?',
+          options: [
+            { id: 'opt-1', text: 'Executes standard procedural statements', isCorrect: true },
+            { id: 'opt-2', text: 'Stops program compilation', isCorrect: false }
+          ],
+          correctOptionIds: ['opt-1'],
+          explanation: 'It performs standard instructions according to syntax.'
+        },
+        xpReward: l.xp_reward || 100,
+        sortOrder: l.sort_order
+      });
+    }
+
+    // Attach lessons to modules
+    for (const cId in modulesByCourse) {
+      for (const mod of modulesByCourse[cId]) {
+        mod.lessons = lessonsByModule[mod.id] || [];
+      }
+    }
+
+    const courses = coursesRes.rows.map(c => ({
+      id: c.id,
+      title: c.title,
+      description: c.description,
+      language: c.language || 'python',
+      level: c.level || 'Beginner',
+      authorId: c.author_id,
+      authorName: c.author_name || 'Verified Educator',
+      isPublished: Boolean(c.is_published),
+      modules: modulesByCourse[c.id] || []
+    }));
+
+    return res.json({ success: true, courses });
+  } catch (err: any) {
+    console.error('Error fetching courses:', err.message);
+    return res.json({ success: true, courses: [] });
+  }
+});
+
+// POST: Create a new Course in PostgreSQL
+router.post('/', async (req: Request, res: Response) => {
+  try {
+    const { title, description, language = 'python', level = 'Beginner', authorId = 'usr-teacher-1', authorName = 'Teacher' } = req.body;
+    const courseId = 'crs-' + Date.now();
+
+    const insertQuery = `
+      INSERT INTO courses (id, title, description, language, level, author_id, author_name, is_published, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, true, NOW())
+      RETURNING *;
+    `;
+    const result = await pool.query(insertQuery, [
+      courseId,
+      title || 'New Course',
+      description || 'Curriculum course description',
+      language,
+      level,
+      authorId,
+      authorName
+    ]);
+
+    const r = result.rows[0];
+    const newCourse = {
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      language: r.language,
+      level: r.level,
+      authorId: r.author_id,
+      authorName: r.author_name,
+      isPublished: true,
+      modules: []
+    };
+
+    return res.status(201).json({ success: true, course: newCourse });
+  } catch (err: any) {
+    console.error('Error creating course:', err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST: Add a new Module to a Course in PostgreSQL
+router.post('/:courseId/modules', async (req: Request, res: Response) => {
+  try {
+    const { courseId } = req.params;
+    const { title, description, sortOrder = 1 } = req.body;
+    const moduleId = 'mod-' + Date.now();
+
+    const insertQuery = `
+      INSERT INTO modules (id, course_id, title, description, sort_order, created_at)
+      VALUES ($1, $2, $3, $4, $5, NOW())
+      RETURNING *;
+    `;
+    const result = await pool.query(insertQuery, [
+      moduleId,
+      courseId,
+      title || 'New Module',
+      description || 'Module details',
+      sortOrder
+    ]);
+
+    const r = result.rows[0];
+    const newModule = {
+      id: r.id,
+      courseId: r.course_id,
+      title: r.title,
+      description: r.description,
+      sortOrder: r.sort_order,
+      lessons: []
+    };
+
+    return res.status(201).json({ success: true, module: newModule });
+  } catch (err: any) {
+    console.error('Error creating module:', err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST: Add a new Lesson to a Module in PostgreSQL
+router.post('/:courseId/modules/:moduleId/lessons', async (req: Request, res: Response) => {
+  try {
+    const { moduleId } = req.params;
+    const { title, subtitle, theoryHtml, exercise, mcq, xpReward = 100, sortOrder = 1 } = req.body;
+    const lessonId = 'lsn-' + Date.now();
+
+    const insertQuery = `
+      INSERT INTO lessons (id, module_id, title, subtitle, theory_html, exercise_data, mcq_data, xp_reward, sort_order, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+      RETURNING *;
+    `;
+    const result = await pool.query(insertQuery, [
+      lessonId,
+      moduleId,
+      title || 'New Lesson',
+      subtitle || 'Lesson concept overview',
+      theoryHtml || '<h3>Concept Overview</h3><p>Detailed notes here.</p>',
+      JSON.stringify(exercise || {}),
+      JSON.stringify(mcq || {}),
+      xpReward,
+      sortOrder
+    ]);
+
+    const r = result.rows[0];
+    const newLesson = {
+      id: r.id,
+      moduleId: r.module_id,
+      title: r.title,
+      subtitle: r.subtitle,
+      theoryHtml: r.theory_html,
+      exercise: r.exercise_data,
+      mcq: r.mcq_data,
+      xpReward: r.xp_reward,
+      sortOrder: r.sort_order
+    };
+
+    return res.status(201).json({ success: true, lesson: newLesson });
+  } catch (err: any) {
+    console.error('Error creating lesson:', err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// DELETE: Delete a Course
+router.delete('/:courseId', async (req: Request, res: Response) => {
+  try {
+    const { courseId } = req.params;
+    await pool.query('DELETE FROM courses WHERE id = $1', [courseId]);
+    return res.json({ success: true, message: 'Course deleted.' });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 export default router;
