@@ -155,8 +155,11 @@ export const PublicPlaygroundPage: React.FC<PublicPlaygroundPageProps> = ({ onOp
     confetti({ particleCount: 40, spread: 50, origin: { y: 0.6 } });
   };
 
-  const handleScanComplete = (scannedText: string) => {
+  const handleScanComplete = (scannedText: string, detectedLang?: 'python' | 'cpp' | 'javascript') => {
     setActiveCode(scannedText);
+    if (detectedLang) {
+      setActiveLang(detectedLang);
+    }
     confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
   };
 

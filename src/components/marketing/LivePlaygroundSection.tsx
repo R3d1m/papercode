@@ -14,8 +14,11 @@ export const LivePlaygroundSection: React.FC = () => {
   const [activeCode, setActiveCode] = useState<string>(SAMPLE_KHATA_CODE);
   const [activeLang, setActiveLang] = useState<'python' | 'cpp' | 'javascript'>('python');
 
-  const handleScanComplete = (scannedText: string) => {
+  const handleScanComplete = (scannedText: string, detectedLang?: 'python' | 'cpp' | 'javascript') => {
     setActiveCode(scannedText);
+    if (detectedLang) {
+      setActiveLang(detectedLang);
+    }
     confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
   };
 

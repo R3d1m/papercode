@@ -66,6 +66,14 @@ print("Decrypted Back :", reversed_code[::-1])`,
   const [aiMode, setAiMode] = useState<'explain' | 'debug' | null>(null);
   const [isAiLoading, setIsAiLoading] = useState<boolean>(false);
 
+  // Synchronize language when prop changes
+  useEffect(() => {
+    if (initialLanguage) {
+      setLanguage(initialLanguage);
+    }
+  }, [initialLanguage]);
+
+  // Synchronize incoming extracted code into editor (WITHOUT auto-running)
   useEffect(() => {
     if (initialCode !== undefined) {
       setCode(initialCode);
@@ -73,7 +81,7 @@ print("Decrypted Back :", reversed_code[::-1])`,
     setExecutionResult(null);
     setAiExplanation(null);
     setAiMode(null);
-  }, [initialCode, expectedOutput, initialLanguage]);
+  }, [initialCode, expectedOutput]);
 
   const hasError = Boolean(
     executionResult && (
@@ -428,9 +436,7 @@ print("Decrypted Back :", reversed_code[::-1])`,
               )}
             </>
           ) : (
-            <div className="text-slate-400 italic">
-              Click &quot;RUN CODE&quot; above to execute this handwritten Python snippet on live Judge0 compiler.
-            </div>
+            <div className="text-slate-400 font-bold">No output yet. Click RUN CODE to see the output here.</div>
           )}
         </div>
       </div>
