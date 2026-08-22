@@ -1,4 +1,4 @@
-import { User, Course, Roadmap, Classroom, Submission, InstitutionalAccount } from '../types';
+import { User, Course, Roadmap, Classroom, Submission, InstitutionalAccount, BlogPost } from '../types';
 
 export const CURRENT_STUDENT: User = {
   id: 'usr-std-001',
@@ -681,3 +681,6 @@ export const SEED_INSTITUTIONAL_ACCOUNTS: InstitutionalAccount[] = [
     status: 'Active'
   }
 ];
+
+export const SEED_BLOGS: BlogPost[] = [];
+

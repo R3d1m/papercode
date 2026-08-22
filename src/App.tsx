@@ -19,13 +19,14 @@ import { StudentClassroomsView } from './components/student/StudentClassroomsVie
 import { StudentClassroomDetailView } from './components/student/StudentClassroomDetailView';
 import { StudentRoadmapsView } from './components/student/StudentRoadmapsView';
 import { LessonPlayer } from './components/student/LessonPlayer';
+import { CourseDetailView } from './components/student/CourseDetailView';
 import { TeacherDashboard } from './components/teacher/TeacherDashboard';
 import { TeacherAnalyticsView } from './components/teacher/TeacherAnalyticsView';
 import { CourseBuilder } from './components/teacher/CourseBuilder';
 import { BatchGradingView } from './components/teacher/BatchGradingView';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { ProfileView } from './components/profile/ProfileView';
-import { Classroom } from './types';
+import { Classroom, Course, Lesson } from './types';
 
 export const App: React.FC = () => {
   const { activeMode, setActiveMode } = useApp();
@@ -34,6 +35,7 @@ export const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<string>('hero');
   const [previousView, setPreviousView] = useState<string>('student_dashboard');
   const [selectedClassroomForDetail, setSelectedClassroomForDetail] = useState<Classroom | null>(null);
+  const [selectedCourseForDetail, setSelectedCourseForDetail] = useState<Course | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
   const [authInitialTab, setAuthInitialTab] = useState<'login' | 'signup'>('login');
   const [joinModalOpen, setJoinModalOpen] = useState<boolean>(false);
@@ -76,6 +78,16 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleOpenCourseDetail = (course: Course) => {
+    setSelectedCourseForDetail(course);
+    setPreviousView(currentView);
+    if (activeMode === 'student') {
+      setCurrentView('student_course_detail');
+    } else {
+      setCurrentView('public_courses');
+    }
+  };
+
   const handleOpenClassroomDetail = (cls: Classroom) => {
     setSelectedClassroomForDetail(cls);
     setCurrentView('student_classroom_detail');
@@ -87,7 +99,11 @@ export const App: React.FC = () => {
   };
 
   const handleBackFromLesson = () => {
-    setCurrentView(previousView || 'student_dashboard');
+    if (selectedCourseForDetail) {
+      setCurrentView(activeMode === 'student' ? 'student_course_detail' : 'public_courses');
+    } else {
+      setCurrentView(previousView || 'student_dashboard');
+    }
   };
 
   const handleBackFromProfile = () => {
@@ -108,7 +124,12 @@ export const App: React.FC = () => {
       {/* Sleek Top Navigation Bar: Roadmaps | Courses | Pricing | Blogs */}
       <TopNav
         currentView={currentView}
-        setCurrentView={setCurrentView}
+        setCurrentView={(view) => {
+          if (view !== 'student_course_detail' && view !== 'public_courses') {
+            setSelectedCourseForDetail(null);
+          }
+          setCurrentView(view);
+        }}
         onOpenAuth={handleOpenAuth}
         onOpenJoinModal={handleOpenJoinModal}
       />
@@ -131,7 +152,18 @@ export const App: React.FC = () => {
                   ) : currentView === 'public_roadmaps' ? (
                     <PublicRoadmapsPage onOpenAuth={handleOpenAuth} />
                   ) : currentView === 'public_courses' ? (
-                    <PublicCoursesPage onOpenAuth={handleOpenAuth} />
+                    selectedCourseForDetail ? (
+                      <CourseDetailView
+                        course={selectedCourseForDetail}
+                        onBack={() => setSelectedCourseForDetail(null)}
+                        onOpenLesson={() => handleOpenAuth('signup')}
+                      />
+                    ) : (
+                      <PublicCoursesPage 
+                        onOpenAuth={handleOpenAuth} 
+                        onOpenCourseDetail={handleOpenCourseDetail}
+                      />
+                    )
                   ) : currentView === 'public_pricing' ? (
                     <PublicPricingPage onOpenAuth={handleOpenAuth} />
                   ) : currentView === 'public_blogs' ? (
@@ -171,6 +203,15 @@ export const App: React.FC = () => {
                     <PublicPlaygroundPage onOpenAuth={handleOpenAuth} />
                   ) : currentView === 'public_blogs' ? (
                     <PublicBlogsPage onOpenAuth={handleOpenAuth} />
+                  ) : currentView === 'student_course_detail' && selectedCourseForDetail ? (
+                    <CourseDetailView
+                      course={selectedCourseForDetail}
+                      onBack={() => {
+                        setSelectedCourseForDetail(null);
+                        setCurrentView('student_dashboard');
+                      }}
+                      onOpenLesson={handleOpenLesson}
+                    />
                   ) : currentView === 'student_lesson' ? (
                     <LessonPlayer onBack={handleBackFromLesson} />
                   ) : currentView === 'student_classroom_detail' && selectedClassroomForDetail ? (
@@ -193,6 +234,7 @@ export const App: React.FC = () => {
                     <StudentDashboard
                       onOpenLesson={handleOpenLesson}
                       onOpenJoinModal={handleOpenJoinModal}
+                      onOpenCourseDetail={handleOpenCourseDetail}
                     />
                   )}
                 </div>

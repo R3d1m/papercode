@@ -250,3 +250,43 @@ export interface InstitutionalAccount {
   contactPerson: string;
   status: 'Active' | 'Pending Renewal';
 }
+
+export interface BlogComment {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar?: string;
+  authorRole?: string;
+  text: string;
+  createdAt: string;
+}
+
+export interface BlogPost {
+  id: string;
+  title: string;
+  subtitle: string;
+  category: string;
+  coverImage?: string;
+  authorId?: string;
+  authorEmail?: string;
+  author: {
+    name: string;
+    role?: string;
+    avatar?: string;
+    affiliation?: string;
+  };
+  publishedAt: string;
+  readTime: string;
+  claps: number;
+  reactions?: {
+    applaud: number;
+    heart: number;
+    fire: number;
+    idea: number;
+  };
+  comments?: BlogComment[];
+  content: string[];
+  tags: string[];
+  isPublished?: boolean;
+}
+

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { Course } from '../../types';
 import { BentoCard } from '../common/BentoCard';
 import { PillButton } from '../common/PillButton';
 import { 
@@ -16,9 +17,10 @@ import {
 
 interface PublicCoursesPageProps {
   onOpenAuth: (tab: 'login' | 'signup') => void;
+  onOpenCourseDetail?: (course: Course) => void;
 }
 
-export const PublicCoursesPage: React.FC<PublicCoursesPageProps> = ({ onOpenAuth }) => {
+export const PublicCoursesPage: React.FC<PublicCoursesPageProps> = ({ onOpenAuth, onOpenCourseDetail }) => {
   const { courses } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -65,7 +67,8 @@ export const PublicCoursesPage: React.FC<PublicCoursesPageProps> = ({ onOpenAuth
           <BentoCard 
             key={course.id} 
             variant="white" 
-            className="p-6 sm:p-8 border-2 border-ink flex flex-col justify-between space-y-6 hover:shadow-solid-lg transition-all"
+            onClick={() => onOpenCourseDetail ? onOpenCourseDetail(course) : onOpenAuth('signup')}
+            className="p-6 sm:p-8 border-2 border-ink flex flex-col justify-between space-y-6 hover:shadow-solid-lg transition-all cursor-pointer"
           >
             <div className="space-y-4">
               

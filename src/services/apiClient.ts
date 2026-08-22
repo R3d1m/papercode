@@ -340,9 +340,12 @@ export const apiClient = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, studentId })
       });
-      if (res.ok) return await res.json();
-    } catch (e) {}
-    return { success: false, message: 'Unable to connect to classroom service.' };
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) return data;
+      return { success: false, message: data.message || 'Unable to join classroom with this code.' };
+    } catch (e) {
+      return { success: false, message: 'Unable to connect to classroom service.' };
+    }
   },
 
   async removeStudentFromClassroom(classroomId: string, studentId: string) {
@@ -387,6 +390,92 @@ export const apiClient = {
     return { success: false };
   },
 
+  async getBlogs() {
+    try {
+      const res = await fetch(API_BASE + '/blogs');
+      if (res.ok) return await res.json();
+    } catch (e) {}
+    return { success: false, blogs: [] };
+  },
+
+  async createBlog(data: any) {
+    try {
+      const res = await fetch(API_BASE + '/blogs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {}
+    return { success: false };
+  },
+
+  async updateBlog(id: string, data: any) {
+    try {
+      const res = await fetch(API_BASE + '/blogs/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {}
+    return { success: false };
+  },
+
+  async deleteBlog(id: string) {
+    try {
+      const res = await fetch(API_BASE + '/blogs/' + id, {
+        method: 'DELETE'
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {}
+    return { success: false };
+  },
+
+  async reactToBlog(id: string, reaction: 'applaud' | 'heart' | 'fire' | 'idea') {
+    try {
+      const res = await fetch(API_BASE + '/blogs/' + id + '/react', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reaction })
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {}
+    return { success: false };
+  },
+
+  async addBlogComment(id: string, commentData: { authorId?: string; authorName?: string; authorAvatar?: string; authorRole?: string; text: string }) {
+    try {
+      const res = await fetch(API_BASE + '/blogs/' + id + '/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(commentData)
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {}
+    return { success: false };
+  },
+
+  async deleteBlogComment(blogId: string, commentId: string) {
+    try {
+      const res = await fetch(API_BASE + '/blogs/' + blogId + '/comments/' + commentId, {
+        method: 'DELETE'
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {}
+    return { success: false };
+  },
+
+  async toggleBlogPublish(id: string) {
+    try {
+      const res = await fetch(API_BASE + '/blogs/' + id + '/toggle-publish', {
+        method: 'POST'
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {}
+    return { success: false };
+  },
+
   async getAdminVitals() {
     try {
       const res = await fetch(API_BASE + '/admin/vitals');
@@ -409,6 +498,14 @@ export const apiClient = {
     };
   },
 
+  async getSubmissions() {
+    try {
+      const res = await fetch(API_BASE + '/submissions');
+      if (res.ok) return await res.json();
+    } catch (e) {}
+    return { success: false, submissions: [] };
+  },
+
   async submitExercise(data: any) {
     try {
       const res = await fetch(API_BASE + '/submissions', {
@@ -419,5 +516,18 @@ export const apiClient = {
       if (res.ok) return await res.json();
     } catch (e) {}
     return { success: true };
+  },
+
+  async gradeSubmission(submissionId: string, data: { score: number; feedback: string; teacherNotes?: string }) {
+    try {
+      const res = await fetch(API_BASE + '/submissions/' + submissionId + '/grade', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {}
+    return { success: false };
   }
 };
+

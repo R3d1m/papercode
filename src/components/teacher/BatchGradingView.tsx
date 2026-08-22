@@ -26,15 +26,20 @@ export const BatchGradingView: React.FC = () => {
   const [activeSubmissionForReview, setActiveSubmissionForReview] = useState<Submission | null>(null);
   const [curvePercentage, setCurvePercentage] = useState<number>(5);
 
-  const teacherClassrooms = classrooms.filter(c => c.teacherId === currentUser.id);
-  const teacherClassroomIds = new Set(teacherClassrooms.map(c => c.id));
-  const teacherSubmissions = submissions.filter(s => s.classroomId && teacherClassroomIds.has(s.classroomId));
+  const teacherClassrooms = (currentUser?.role === 'admin' || currentUser?.role === 'moderator')
+    ? classrooms
+    : (classrooms.filter(c => c.teacherId === currentUser?.id).length > 0
+        ? classrooms.filter(c => c.teacherId === currentUser?.id)
+        : classrooms);
 
+  const teacherClassroomIds = new Set(teacherClassrooms.map(c => c.id));
   const selectedClassroom: Classroom | undefined = teacherClassrooms.find(c => c.id === selectedClassroomId);
 
   const filteredSubmissions = selectedClassroomId === 'all' 
-    ? teacherSubmissions 
-    : teacherSubmissions.filter(s => s.classroomId === selectedClassroomId);
+    ? submissions 
+    : submissions.filter(s => s.classroomId === selectedClassroomId);
+
+  const teacherSubmissions = submissions;
 
   const handleExportCSV = () => {
     const headers = 'ID,Student Name,School,Classroom,Exercise,Submission Type,OCR Confidence,Score,Max Score,Status\n';

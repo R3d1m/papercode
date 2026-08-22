@@ -1,16 +1,17 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Role, User, Classroom, Course, Roadmap, Submission, Lesson, Module, ClassroomAssignment } from '../types';
+import { Role, User, Classroom, Course, Roadmap, Submission, Lesson, Module, ClassroomAssignment, BlogPost, BlogComment } from '../types';
 import { 
   CURRENT_STUDENT, 
   CURRENT_TEACHER, 
   CURRENT_MODERATOR,
   SEED_MODERATORS,
   CURRENT_ADMIN, 
-  SEED_USERS,
+  SEED_USERS, 
   SEED_COURSES, 
   SEED_ROADMAPS, 
   SEED_CLASSROOMS, 
-  SEED_SUBMISSIONS 
+  SEED_SUBMISSIONS,
+  SEED_BLOGS
 } from '../data/seedData';
 import { apiClient } from '../services/apiClient';
 
@@ -21,22 +22,21 @@ interface AppContextType {
   currentUser: User;
   switchRole: (role: Role) => void;
   login: (email: string, password?: string, role?: Role) => Promise<{ success: boolean; message: string; user?: User }>;
-  loginWithGoogle: (data: { credential?: string; accessToken?: string; role?: Role; school?: string; division?: string; profile?: any }) => Promise<{ success: boolean; message: string; user?: User }>;
-  signup: (userData: { name: string; email: string; password?: string; role: Role; school?: string; division?: string }) => Promise<{ success: boolean; message: string; user?: User }>;
+  loginWithGoogle: (data: { credential?: string; accessToken?: string; role?: Role; school?: string; division?: string; profile?: any }) => Promise<{ success: boolean; message?: string; user?: User }>;
+  signup: (userData: { name: string; email: string; password?: string; role: Role; school?: string; division?: string }) => Promise<{ success: boolean; message?: string; user?: User }>;
   logout: () => void;
   users: User[];
   moderators: User[];
-  addModerator: (data: { name: string; email: string; school?: string; permissions?: string[] }) => User;
-  removeModerator: (moderatorId: string) => void;
-  promoteTeacherToModerator: (teacherId: string, permissions?: string[]) => User | null;
+  promoteTeacherToModerator: (teacherId: string, permissions?: string[]) => void;
   demoteModerator: (moderatorId: string) => void;
   classrooms: Classroom[];
   courses: Course[];
   roadmaps: Roadmap[];
+  blogs: BlogPost[];
   submissions: Submission[];
+  completedLessonIds: string[];
   activeLesson: Lesson | null;
   setActiveLesson: (lesson: Lesson | null) => void;
-  completedLessonIds: string[];
   completeLesson: (lessonId: string) => void;
   isLessonUnlocked: (lessonId: string) => boolean;
   studentXp: number;
@@ -65,8 +65,18 @@ interface AppContextType {
   updateRoadmap: (roadmapId: string, data: Partial<Roadmap>) => void;
   addRoadmap: (roadmapData: Omit<Roadmap, 'id'>) => Roadmap;
   deleteRoadmap: (roadmapId: string) => void;
+  toggleRoadmapPublish: (roadmapId: string) => void;
+  setRoadmapCourses: (roadmapId: string, courseIds: string[]) => void;
   addCourseToRoadmap: (roadmapId: string, courseId: string) => void;
   removeCourseFromRoadmap: (roadmapId: string, courseId: string) => void;
+  addBlog: (postData: Omit<BlogPost, 'id' | 'claps' | 'publishedAt'>) => BlogPost;
+  updateBlog: (blogId: string, data: Partial<BlogPost>) => void;
+  deleteBlog: (blogId: string) => void;
+  clapBlog: (blogId: string) => void;
+  reactToBlog: (blogId: string, reaction: 'applaud' | 'heart' | 'fire' | 'idea') => void;
+  addBlogComment: (blogId: string, text: string) => void;
+  deleteBlogComment: (blogId: string, commentId: string) => void;
+  toggleBlogPublish: (blogId: string) => void;
   updateUserProfile: (data: Partial<User>) => void;
   enrollInCourse: (courseId: string) => void;
 }
@@ -95,6 +105,19 @@ const getSavedMode = (): 'marketing' | 'student' | 'teacher' | 'moderator' | 'ad
   return 'marketing';
 };
 
+const getSavedCompletedLessons = (): string[] => {
+  try {
+    const saved = localStorage.getItem('papercode_completed_lessons');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
+    }
+    const user = getSavedUser();
+    if (user && Array.isArray(user.completedLessons)) return user.completedLessons;
+  } catch {}
+  return [];
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [activeMode, setActiveMode] = useState<'marketing' | 'student' | 'teacher' | 'moderator' | 'admin'>(getSavedMode);
   const [currentRole, setCurrentRole] = useState<Role>(() => getSavedUser().role || 'student');
@@ -104,15 +127,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [moderators, setModerators] = useState<User[]>(SEED_MODERATORS);
   const [classrooms, setClassrooms] = useState<Classroom[]>(SEED_CLASSROOMS);
   const [courses, setCourses] = useState<Course[]>(SEED_COURSES);
-  const [roadmaps, setRoadmaps] = useState<Roadmap[]>(SEED_ROADMAPS);
+  const [roadmaps, setRoadmaps] = useState<Roadmap[]>(() => {
+    try {
+      const saved = localStorage.getItem('papercode_roadmaps_data');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return SEED_ROADMAPS;
+  });
+  const [blogs, setBlogs] = useState<BlogPost[]>(() => {
+    try {
+      const saved = localStorage.getItem('papercode_blogs_data');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return SEED_BLOGS;
+  });
   const [submissions, setSubmissions] = useState<Submission[]>(SEED_SUBMISSIONS);
   
-  const [completedLessonIds, setCompletedLessonIds] = useState<string[]>([]);
+  const [completedLessonIds, setCompletedLessonIds] = useState<string[]>(getSavedCompletedLessons);
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(SEED_COURSES[0]?.modules?.[0]?.lessons?.[0] || null);
-  const [studentXp, setStudentXp] = useState<number>(0);
-  const [studentStreak, setStudentStreak] = useState<number>(0);
+  const [studentXp, setStudentXp] = useState<number>(() => getSavedUser().xp || 0);
+  const [studentStreak, setStudentStreak] = useState<number>(() => getSavedUser().streak || 0);
 
-  // Sync classrooms from PostgreSQL backend on mount
+  // Sync completedLessonIds, roadmaps, and blogs to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('papercode_completed_lessons', JSON.stringify(completedLessonIds));
+    } catch {}
+  }, [completedLessonIds]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('papercode_roadmaps_data', JSON.stringify(roadmaps));
+    } catch {}
+  }, [roadmaps]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('papercode_blogs_data', JSON.stringify(blogs));
+    } catch {}
+  }, [blogs]);
+
+  // Sync classrooms, courses, blogs, and submissions from backend on mount
   useEffect(() => {    
     apiClient.getClassrooms().then(res => {
       if (res && res.classrooms && Array.isArray(res.classrooms)) {
@@ -122,29 +183,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Classroom sync skipped:', e);
     });
 
-    // Sync courses from PostgreSQL backend on mount
     apiClient.getCourses().then(res => {
       if (res && res.courses && Array.isArray(res.courses) && res.courses.length > 0) {
         setCourses(res.courses);
         if (res.courses[0]?.modules?.[0]?.lessons?.[0]) {
           setActiveLesson(res.courses[0].modules[0].lessons[0]);
         }
-        
-        // Build dynamic roadmaps from database courses
-        const dbRoadmaps: Roadmap[] = [
-          {
-            id: 'rdm-db-hsc-ict',
-            title: 'NCTB HSC ICT Chapter 5 (Structured Programming)',
-            description: 'Master variables, data types, conditional branching, loops, and arrays directly on paper notebook.',
-            badge: '🏆 National HSC Board Exam Mastery',
-            targetAudience: 'HSC & College Students',
-            courses: res.courses,
-            isPublic: true,
-            totalXp: 5000,
-            enrolledCount: 150
-          }
-        ];
-        setRoadmaps(dbRoadmaps);
+      }
+    }).catch(() => {});
+
+    apiClient.getBlogs().then(res => {
+      if (res && res.blogs && Array.isArray(res.blogs)) {
+        setBlogs(res.blogs);
+      }
+    }).catch(() => {});
+
+    apiClient.getSubmissions().then(res => {
+      if (res && res.submissions && Array.isArray(res.submissions) && res.submissions.length > 0) {
+        setSubmissions(res.submissions);
       }
     }).catch(() => {});
   }, []);
@@ -152,9 +208,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const allOrderedLessons: Lesson[] = courses.flatMap(c => (c.modules || []).flatMap(m => m.lessons || []));
 
   const completeLesson = (lessonId: string) => {
-    if (!completedLessonIds.includes(lessonId)) {
-      setCompletedLessonIds(prev => [...prev, lessonId]);
-    }
+    if (!lessonId) return;
+    setCompletedLessonIds(prev => {
+      if (prev.includes(lessonId)) return prev;
+      const updated = [...prev, lessonId];
+      try {
+        localStorage.setItem('papercode_completed_lessons', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
+    setCurrentUser(prev => {
+      const curr = prev.completedLessons || [];
+      if (curr.includes(lessonId)) return prev;
+      const updatedLessons = [...curr, lessonId];
+      const updatedUser = { ...prev, completedLessons: updatedLessons };
+      try {
+        localStorage.setItem('papercode_user_session', JSON.stringify(updatedUser));
+      } catch {}
+      return updatedUser;
+    });
   };
 
   const isLessonUnlocked = (lessonId: string): boolean => {
@@ -421,39 +494,76 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const joinClassroom = async (code: string): Promise<{ success: boolean; message: string; classroom?: any }> => {
     const formattedCode = (code || '').trim().toUpperCase();
+    const cleanCode = formattedCode.replace(/[^A-Z0-9]/g, '');
     if (!formattedCode) return { success: false, message: 'Please enter a valid Join Code.' };
     
-    const backendRes = await apiClient.joinClassroom(formattedCode, currentUser?.id);
-    if (!backendRes || !backendRes.success) {
-      return { 
-        success: false, 
-        message: backendRes?.message || 'Invalid or expired Join Code. Please verify with your teacher.' 
+    let matchedClassroom: any = null;
+    let successMessage = '';
+
+    // 1. Try PostgreSQL backend
+    try {
+      const backendRes = await apiClient.joinClassroom(formattedCode, currentUser?.id);
+      if (backendRes && backendRes.success && backendRes.classroom) {
+        matchedClassroom = backendRes.classroom;
+        successMessage = backendRes.message || `Successfully joined ${backendRes.classroom.name}!`;
+      }
+    } catch (e) {}
+
+    // 2. Fallback to matching local classrooms state
+    if (!matchedClassroom) {
+      const localMatch = classrooms.find(c => {
+        const cCode = (c.joinCode || '').toUpperCase().trim();
+        const cClean = cCode.replace(/[^A-Z0-9]/g, '');
+        return cCode === formattedCode || cClean === cleanCode;
+      });
+
+      if (localMatch) {
+        matchedClassroom = localMatch;
+        successMessage = `Successfully joined ${localMatch.name}!`;
+      }
+    }
+
+    if (!matchedClassroom) {
+      return {
+        success: false,
+        message: `Invalid or expired Join Code (${formattedCode}). Please verify with your teacher.`
       };
     }
 
-    // Refresh all classrooms from backend to get fresh rosters
-    const classRes = await apiClient.getClassrooms();
-    if (classRes && Array.isArray(classRes.classrooms)) {
-      setClassrooms(classRes.classrooms);
+    const clsId = matchedClassroom.id;
+    const currentEnrolled = currentUser?.enrolledClassroomIds || [];
+    if (!currentEnrolled.includes(clsId)) {
+      const updatedEnrolled = [...currentEnrolled, clsId];
+      const updatedUser: User = {
+        ...currentUser,
+        enrolledClassroomIds: updatedEnrolled
+      };
+      setCurrentUser(updatedUser);
+      try {
+        localStorage.setItem('papercode_user_session', JSON.stringify(updatedUser));
+      } catch {}
     }
 
-    if (backendRes.classroom) {
-      const clsId = backendRes.classroom.id;
-      const currentEnrolled = currentUser?.enrolledClassroomIds || [];
-      if (!currentEnrolled.includes(clsId)) {
-        const updatedEnrolled = [...currentEnrolled, clsId];
-        const updatedUser: User = {
-          ...currentUser,
-          enrolledClassroomIds: updatedEnrolled
-        };
-        setCurrentUser(updatedUser);
-        try {
-          localStorage.setItem('papercode_user_session', JSON.stringify(updatedUser));
-        } catch {}
+    // Ensure student is in classroom roster in local state
+    setClassrooms(prev => {
+      const exists = prev.some(c => c.id === clsId);
+      if (!exists) {
+        return [{
+          ...matchedClassroom,
+          roster: [{
+            studentId: currentUser.id,
+            name: currentUser.name,
+            email: currentUser.email,
+            avatar: currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+            school: currentUser.school || 'Student',
+            division: currentUser.division || 'Chittagong',
+            completedAssignmentsCount: 0,
+            averageScore: 100,
+            lastActive: 'Just joined'
+          }]
+        }, ...prev];
       }
-
-      // Also ensure local classroom state includes current student in roster
-      setClassrooms(prev => prev.map(c => {
+      return prev.map(c => {
         if (c.id === clsId) {
           const alreadyInRoster = (c.roster || []).some(r => r.studentId === currentUser?.id);
           if (!alreadyInRoster && currentUser) {
@@ -477,13 +587,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         }
         return c;
-      }));
-    }
+      });
+    });
 
-    return { 
-      success: true, 
-      message: backendRes.message || 'Enrolled successfully!', 
-      classroom: backendRes.classroom 
+    // Also refresh from backend in background
+    apiClient.getClassrooms().then(res => {
+      if (res && res.classrooms && Array.isArray(res.classrooms)) {
+        setClassrooms(res.classrooms);
+      }
+    }).catch(() => {});
+
+    return {
+      success: true,
+      message: successMessage || 'Enrolled successfully!',
+      classroom: matchedClassroom
     };
   };
 
@@ -608,6 +725,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateSubmissionGrade = (submissionId: string, score: number, feedback: string, teacherNotes?: string) => {
+    apiClient.gradeSubmission(submissionId, { score, feedback, teacherNotes }).catch(() => {});
     setSubmissions(prev => prev.map(sub => {
       if (sub.id === submissionId) {
         return {
@@ -663,93 +781,71 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addModuleToCourse = (courseId: string, moduleData: any) => {
-    apiClient.createModule(courseId, {
-      title: moduleData.title,
-      description: moduleData.description,
-      sortOrder: (courses.find(c => c.id === courseId)?.modules?.length || 0) + 1
-    });
+    apiClient.createModule(courseId, moduleData);
     setCourses(prev => prev.map(c => {
       if (c.id === courseId) {
-        return {
-          ...c,
-          modules: [...(c.modules || []), moduleData]
+        const newMod: Module = {
+          id: 'mod-' + Date.now(),
+          title: moduleData.title || 'New Module',
+          description: moduleData.description || '',
+          category: moduleData.category || 'Core Concepts',
+          isPublished: true,
+          lessons: []
         };
+        return { ...c, modules: [...(c.modules || []), newMod] };
       }
       return c;
     }));
   };
 
   const deleteModule = (courseId: string, moduleId: string) => {
-    apiClient.deleteModule(courseId, moduleId).catch(() => {});
+    apiClient.deleteModule(courseId, moduleId);
     setCourses(prev => prev.map(c => {
       if (c.id === courseId) {
-        return {
-          ...c,
-          modules: (c.modules || []).filter(m => m.id !== moduleId)
-        };
+        return { ...c, modules: (c.modules || []).filter(m => m.id !== moduleId) };
       }
       return c;
     }));
   };
 
   const updateLesson = (courseId: string, moduleId: string, lessonId: string, updatedLesson: Lesson) => {
-    apiClient.createLesson(courseId, moduleId, {
-      id: updatedLesson.id,
-      title: updatedLesson.title,
-      subtitle: updatedLesson.subtitle,
-      theoryHtml: updatedLesson.theoryContent || (updatedLesson as any).theoryHtml || (updatedLesson.blocks?.find(b => b.type === 'theory') as any)?.htmlContent || '',
-      exercise: updatedLesson.exercise,
-      mcq: updatedLesson.mcq,
-      blocks: updatedLesson.blocks || [],
-      durationMinutes: updatedLesson.durationMinutes || 20,
-      xpReward: updatedLesson.xpReward || 100
-    }).catch(() => {});
-
-    setCourses(prev => prev.map(course => {
-      if (course.id === courseId) {
+    setCourses(prev => prev.map(c => {
+      if (c.id === courseId) {
         return {
-          ...course,
-          modules: (course.modules || []).map(module => {
-            if (module.id === moduleId) {
-              const existingIdx = (module.lessons || []).findIndex(les => les.id === lessonId);
-              const newLessons = existingIdx >= 0
-                ? module.lessons.map(les => les.id === lessonId ? updatedLesson : les)
-                : [...(module.lessons || []), updatedLesson];
+          ...c,
+          modules: (c.modules || []).map(m => {
+            if (m.id === moduleId) {
               return {
-                ...module,
-                lessons: newLessons
+                ...m,
+                lessons: (m.lessons || []).map(l => l.id === lessonId ? updatedLesson : l)
               };
             }
-            return module;
+            return m;
           })
         };
       }
-      return course;
+      return c;
     }));
-
-    if (activeLesson?.id === lessonId) {
-      setActiveLesson(updatedLesson);
-    }
   };
 
   const deleteLesson = (courseId: string, moduleId: string, lessonId: string) => {
-    apiClient.deleteLesson(courseId, moduleId, lessonId).catch(() => {});
-    setCourses(prev => prev.map(course => {
-      if (course.id === courseId) {
+    apiClient.deleteLesson(courseId, moduleId, lessonId);
+    setCourses(prev => prev.map(c => {
+      if (c.id === courseId) {
         return {
-          ...course,
-          modules: (course.modules || []).map(module => {
-            if (module.id === moduleId) {
+          ...c,
+          modules: (c.modules || []).map(m => {
+            if (m.id === moduleId) {
               return {
-                ...module,
-                lessons: (module.lessons || []).filter(les => les.id !== lessonId)
+                ...m,
+                lessons: (m.lessons || []).filter(l => l.id !== lessonId)
               };
             }
-            return module;
+            return m;
           })
         };
       }
-      return course;
+      return c;
     }));
   };
 
@@ -757,8 +853,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setRoadmaps(prev => prev.map(r => r.id === roadmapId ? { ...r, isPublic: true } : r));
   };
 
+  const toggleRoadmapPublish = (roadmapId: string) => {
+    setRoadmaps(prev => prev.map(r => r.id === roadmapId ? { ...r, isPublic: !r.isPublic } : r));
+  };
+
   const updateRoadmap = (roadmapId: string, data: Partial<Roadmap>) => {
     setRoadmaps(prev => prev.map(r => r.id === roadmapId ? { ...r, ...data } : r));
+  };
+
+  const setRoadmapCourses = (roadmapId: string, courseIds: string[]) => {
+    setRoadmaps(prev => prev.map(r => {
+      if (r.id === roadmapId) {
+        const selectedCourses = courses.filter(c => courseIds.includes(c.id));
+        const totalXp = selectedCourses.reduce((sum, c) => {
+          const lessons = (c.modules || []).flatMap(m => m.lessons || []);
+          const lessonXp = lessons.reduce((acc, l) => acc + (l.xpReward || 100), 0);
+          return sum + (lessonXp > 0 ? lessonXp : 1000);
+        }, 0);
+        return {
+          ...r,
+          courses: selectedCourses,
+          totalXp: totalXp > 0 ? totalXp : 1000
+        };
+      }
+      return r;
+    }));
   };
 
   const addRoadmap = (roadmapData: Omit<Roadmap, 'id'>): Roadmap => {
@@ -782,9 +901,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (r.id === roadmapId) {
         const alreadyExists = r.courses.some(c => c.id === courseId);
         if (!alreadyExists) {
+          const updatedCourses = [...r.courses, courseToAdd];
+          const totalXp = updatedCourses.reduce((sum, c) => {
+            const lessons = (c.modules || []).flatMap(m => m.lessons || []);
+            const lessonXp = lessons.reduce((acc, l) => acc + (l.xpReward || 100), 0);
+            return sum + (lessonXp > 0 ? lessonXp : 1000);
+          }, 0);
           return {
             ...r,
-            courses: [...r.courses, courseToAdd]
+            courses: updatedCourses,
+            totalXp: totalXp > 0 ? totalXp : 1000
           };
         }
       }
@@ -792,21 +918,127 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
   };
 
-  const updateUserProfile = (data: Partial<User>) => {
-    setCurrentUser(prev => ({ ...prev, ...data }));
-    setUsers(prev => prev.map(u => u.id === currentUser.id ? { ...u, ...data } : u));
-  };
-
   const removeCourseFromRoadmap = (roadmapId: string, courseId: string) => {
     setRoadmaps(prev => prev.map(r => {
       if (r.id === roadmapId) {
+        const updatedCourses = r.courses.filter(c => c.id !== courseId);
+        const totalXp = updatedCourses.reduce((sum, c) => {
+          const lessons = (c.modules || []).flatMap(m => m.lessons || []);
+          const lessonXp = lessons.reduce((acc, l) => acc + (l.xpReward || 100), 0);
+          return sum + (lessonXp > 0 ? lessonXp : 1000);
+        }, 0);
         return {
           ...r,
-          courses: r.courses.filter(c => c.id !== courseId)
+          courses: updatedCourses,
+          totalXp: totalXp > 0 ? totalXp : 1000
         };
       }
       return r;
     }));
+  };
+
+  const addBlog = (postData: Omit<BlogPost, 'id' | 'claps' | 'publishedAt'>): BlogPost => {
+    const newPost: BlogPost = {
+      ...postData,
+      id: 'blog-' + Date.now(),
+      authorId: postData.authorId || currentUser.id,
+      claps: 0,
+      reactions: { applaud: 0, heart: 0, fire: 0, idea: 0 },
+      comments: [],
+      publishedAt: 'Today',
+      isPublished: postData.isPublished !== undefined ? postData.isPublished : true
+    };
+    apiClient.createBlog(newPost).catch(() => {});
+    setBlogs(prev => [newPost, ...prev]);
+    return newPost;
+  };
+
+  const updateBlog = (blogId: string, data: Partial<BlogPost>) => {
+    apiClient.updateBlog(blogId, data).catch(() => {});
+    setBlogs(prev => prev.map(b => b.id === blogId ? { ...b, ...data } : b));
+  };
+
+  const deleteBlog = (blogId: string) => {
+    apiClient.deleteBlog(blogId).catch(() => {});
+    setBlogs(prev => prev.filter(b => b.id !== blogId));
+  };
+
+  const clapBlog = (blogId: string) => {
+    apiClient.reactToBlog(blogId, 'applaud').catch(() => {});
+    setBlogs(prev => prev.map(b => {
+      if (b.id === blogId) {
+        const prevClaps = b.claps || 0;
+        const reactions = b.reactions || { applaud: prevClaps, heart: 0, fire: 0, idea: 0 };
+        return {
+          ...b,
+          claps: prevClaps + 1,
+          reactions: { ...reactions, applaud: (reactions.applaud || prevClaps) + 1 }
+        };
+      }
+      return b;
+    }));
+  };
+
+  const reactToBlog = (blogId: string, reaction: 'applaud' | 'heart' | 'fire' | 'idea') => {
+    apiClient.reactToBlog(blogId, reaction).catch(() => {});
+    setBlogs(prev => prev.map(b => {
+      if (b.id === blogId) {
+        const reactions = b.reactions || { applaud: b.claps || 0, heart: 0, fire: 0, idea: 0 };
+        const newReactions = {
+          ...reactions,
+          [reaction]: (reactions[reaction] || 0) + 1
+        };
+        const newClaps = reaction === 'applaud' ? (b.claps || 0) + 1 : b.claps;
+        return { ...b, claps: newClaps, reactions: newReactions };
+      }
+      return b;
+    }));
+  };
+
+  const addBlogComment = (blogId: string, text: string) => {
+    const newComment: BlogComment = {
+      id: 'cmt-' + Date.now(),
+      authorId: currentUser.id,
+      authorName: currentUser.name,
+      authorAvatar: currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      authorRole: currentUser.role === 'teacher' ? 'Teacher' : (currentUser.role === 'admin' ? 'Admin' : 'Student'),
+      text: text.trim(),
+      createdAt: 'Just now'
+    };
+
+    apiClient.addBlogComment(blogId, newComment).catch(() => {});
+    setBlogs(prev => prev.map(b => {
+      if (b.id === blogId) {
+        return {
+          ...b,
+          comments: [newComment, ...(b.comments || [])]
+        };
+      }
+      return b;
+    }));
+  };
+
+  const deleteBlogComment = (blogId: string, commentId: string) => {
+    apiClient.deleteBlogComment(blogId, commentId).catch(() => {});
+    setBlogs(prev => prev.map(b => {
+      if (b.id === blogId) {
+        return {
+          ...b,
+          comments: (b.comments || []).filter(c => c.id !== commentId)
+        };
+      }
+      return b;
+    }));
+  };
+
+  const toggleBlogPublish = (blogId: string) => {
+    apiClient.toggleBlogPublish(blogId).catch(() => {});
+    setBlogs(prev => prev.map(b => b.id === blogId ? { ...b, isPublished: b.isPublished === false ? true : false } : b));
+  };
+
+  const updateUserProfile = (data: Partial<User>) => {
+    setCurrentUser(prev => ({ ...prev, ...data }));
+    setUsers(prev => prev.map(u => u.id === currentUser.id ? { ...u, ...data } : u));
   };
 
   return (
@@ -822,13 +1054,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       logout,
       users,
       moderators,
-      addModerator,
-      removeModerator,
       promoteTeacherToModerator,
       demoteModerator,
       classrooms,
       courses,
       roadmaps,
+      blogs,
       submissions,
       activeLesson,
       setActiveLesson,
@@ -861,8 +1092,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateRoadmap,
       addRoadmap,
       deleteRoadmap,
+      toggleRoadmapPublish,
+      setRoadmapCourses,
       addCourseToRoadmap,
       removeCourseFromRoadmap,
+      addBlog,
+      updateBlog,
+      deleteBlog,
+      clapBlog,
+      reactToBlog,
+      addBlogComment,
+      deleteBlogComment,
+      toggleBlogPublish,
       updateUserProfile,
       enrollInCourse
     }}>

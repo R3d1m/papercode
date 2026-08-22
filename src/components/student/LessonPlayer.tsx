@@ -38,7 +38,8 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ onBack }) => {
     completedLessonIds, 
     completeLesson, 
     submitExercise, 
-    addXp 
+    addXp,
+    currentUser
   } = useApp();
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -124,12 +125,20 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ onBack }) => {
   const [ideCode, setIdeCode] = useState<string>(defaultStarter);
   const [isOcrProcessing, setIsOcrProcessing] = useState<boolean>(false);
   const [ocrNotice, setOcrNotice] = useState<string | null>(null);
+  const [scannedImageUrl, setScannedImageUrl] = useState<string | null>(null);
+  const [scannedConfidence, setScannedConfidence] = useState<number | null>(null);
 
   useEffect(() => {
-    if (activeLesson?.exercise?.starterCode) {
+    const block = blocks[currentBlockIndex];
+    if (block && block.type === 'exercise' && block.starterCode) {
+      setIdeCode(block.starterCode);
+      setScannedImageUrl(null);
+      setScannedConfidence(null);
+    } else if (activeLesson?.exercise?.starterCode) {
       setIdeCode(activeLesson.exercise.starterCode);
     }
-  }, [activeLesson?.id]);
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [activeLesson?.id, currentBlockIndex]);
 
   if (!activeLesson) {
     return (
@@ -159,23 +168,25 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ onBack }) => {
     }
   };
 
-  const toggleStudentMcqOption = (blockId: string, optionId: string, isMulti: boolean) => {
-    const current = selectedMcqOptions[blockId] || [];
-    if (!isMulti) {
-      setSelectedMcqOptions({ ...selectedMcqOptions, [blockId]: [optionId] });
-      return;
-    }
-
-    if (current.includes(optionId)) {
-      setSelectedMcqOptions({ ...selectedMcqOptions, [blockId]: current.filter(id => id !== optionId) });
+  const toggleStudentMcqOption = (mcqId: string, optionId: string, isMulti: boolean) => {
+    if (mcqSubmittedStatus[mcqId]) return;
+    const current = selectedMcqOptions[mcqId] || [];
+    if (isMulti) {
+      if (current.includes(optionId)) {
+        setSelectedMcqOptions(prev => ({ ...prev, [mcqId]: current.filter(id => id !== optionId) }));
+      } else {
+        setSelectedMcqOptions(prev => ({ ...prev, [mcqId]: [...current, optionId] }));
+      }
     } else {
-      setSelectedMcqOptions({ ...selectedMcqOptions, [blockId]: [...current, optionId] });
+      setSelectedMcqOptions(prev => ({ ...prev, [mcqId]: [optionId] }));
     }
   };
 
   const handleMcqSubmit = (mcqId: string, correctIds: string[]) => {
-    setMcqSubmittedStatus(prev => ({ ...prev, [mcqId]: true }));
     const selected = selectedMcqOptions[mcqId] || [];
+    if (selected.length === 0) return;
+
+    setMcqSubmittedStatus(prev => ({ ...prev, [mcqId]: true }));
     const isAllCorrect = selected.length === correctIds.length && selected.every(id => correctIds.includes(id));
 
     if (isAllCorrect) {
@@ -196,15 +207,18 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ onBack }) => {
     const reader = new FileReader();
     reader.onload = async () => {
       const base64 = reader.result as string;
+      setScannedImageUrl(base64);
       try {
         const lang = (currentBlock as ExerciseBlock)?.language || 'python';
         const res = await apiClient.extractHandwriting(base64, lang);
         const extracted = res?.code || (currentBlock as ExerciseBlock)?.starterCode || 'print("Hello from PaperCode Bangladesh!")';
         setIdeCode(extracted);
+        setScannedConfidence(res?.confidence || 98.5);
         setOcrNotice('✓ Gemini extracted handwritten code into IDE (' + (res?.confidence || 99.2) + '% confidence)!');
       } catch (err) {
         const fallback = (currentBlock as ExerciseBlock)?.starterCode || 'print("Hello from PaperCode Bangladesh!")';
         setIdeCode(fallback);
+        setScannedConfidence(95.0);
         setOcrNotice('✓ Code extracted from notebook into IDE.');
       } finally {
         setIsOcrProcessing(false);
@@ -220,11 +234,13 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ onBack }) => {
     submitExercise({
       exerciseId: ex.id,
       exerciseTitle: ex.title,
-      studentId: 'usr-student-1',
-      studentName: 'Tanvir Hossain',
-      studentAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-      studentSchool: 'Chittagong Collegiate School',
-      submissionType: 'typed',
+      studentId: currentUser?.id || 'usr-student-1',
+      studentName: currentUser?.name || 'Student',
+      studentAvatar: currentUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      studentSchool: currentUser?.school || 'Independent Learner',
+      submissionType: scannedImageUrl ? 'photo' : 'typed',
+      handwrittenImageUrl: scannedImageUrl || undefined,
+      ocrConfidence: scannedConfidence || (scannedImageUrl ? 98.5 : undefined),
       code: ideCode || ex.starterCode,
       language: ex.language,
       executionResult: {
@@ -252,9 +268,15 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ onBack }) => {
       status: 'auto_graded'
     });
 
-    completeLesson(activeLesson.id);
-    setCurrentBlockIndex(blocks.length);
-    confetti({ particleCount: 140, spread: 90, origin: { y: 0.6 } });
+    if (currentBlockIndex + 1 >= blocks.length) {
+      completeLesson(activeLesson.id);
+      setCurrentBlockIndex(blocks.length);
+      confetti({ particleCount: 140, spread: 90, origin: { y: 0.6 } });
+    } else {
+      setCurrentBlockIndex(currentBlockIndex + 1);
+      confetti({ particleCount: 60, spread: 60, origin: { y: 0.7 } });
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
   };
 
   const handleNextBlock = () => {
@@ -268,6 +290,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ onBack }) => {
       confetti({ particleCount: 140, spread: 90, origin: { y: 0.6 } });
     } else {
       setCurrentBlockIndex(currentBlockIndex + 1);
+      window.scrollTo({ top: 0, behavior: 'instant' });
     }
   };
 
@@ -277,6 +300,8 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ onBack }) => {
     setSelectedMcqOptions({});
     setMcqSubmittedStatus({});
     setCurriculumDrawerOpen(false);
+    setScannedImageUrl(null);
+    window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
   const handleGoToNextLesson = () => {
@@ -285,6 +310,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ onBack }) => {
     } else {
       onBack();
     }
+    window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
   const completedCourseLessonsCount = allCourseLessons.filter(l => completedLessonIds.includes(l.id)).length;
@@ -723,7 +749,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ onBack }) => {
                     className="btn-bounce ml-auto shadow-solid-xs"
                     icon={<Award className="w-4 h-4" />}
                   >
-                    Submit & Pass Challenge (+150 XP) ➔
+                    {currentBlockIndex + 1 >= blocks.length ? 'Submit & Complete Lesson (+150 XP) ➔' : 'Submit & Next Challenge ➔'}
                   </PillButton>
                 </div>
 

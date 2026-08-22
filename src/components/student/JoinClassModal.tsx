@@ -10,29 +10,36 @@ interface JoinClassModalProps {
 }
 
 export const JoinClassModal: React.FC<JoinClassModalProps> = ({ isOpen, onClose }) => {
-  const { joinClassroom } = useApp();
+  const { joinClassroom, classrooms } = useApp();
   const [joinCode, setJoinCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ success?: boolean; message?: string } | null>(null);
 
   if (!isOpen) return null;
 
-  const handleJoin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!joinCode.trim()) return;
+  const sampleCodes = (classrooms || []).map(c => c.joinCode).filter(Boolean);
+  const displayCodes = sampleCodes.length > 0 ? sampleCodes.slice(0, 3) : ['PC-3400', 'PC-9086', 'PC-6685'];
+
+  const handleJoin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const cleanCode = (joinCode || '').trim();
+    if (!cleanCode || isLoading) return;
 
     setIsLoading(true);
+    setStatusMessage(null);
     try {
-      const res = await joinClassroom(joinCode.trim());
+      const res = await joinClassroom(cleanCode);
       setStatusMessage(res);
-      if (res.success) {
+      if (res && res.success) {
         confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
         setTimeout(() => {
           onClose();
           setJoinCode('');
           setStatusMessage(null);
-        }, 1200);
+        }, 1400);
       }
+    } catch (err: any) {
+      setStatusMessage({ success: false, message: err?.message || 'Error joining classroom.' });
     } finally {
       setIsLoading(false);
     }
@@ -67,19 +74,29 @@ export const JoinClassModal: React.FC<JoinClassModalProps> = ({ isOpen, onClose 
         <form onSubmit={handleJoin} className="space-y-4">
           <div className="p-4 bg-paper-light border-2 border-ink/20 rounded-2xl space-y-2">
             <label className="block text-xs font-mono font-extrabold text-graphite uppercase">
-              6-Character Join Code:
+              Join Code:
             </label>
             <input
               type="text"
               value={joinCode}
               onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-              placeholder="e.g. CUET-902"
-              maxLength={10}
+              placeholder="e.g. PC-3400"
+              maxLength={12}
               className="w-full text-center font-mono text-2xl font-extrabold uppercase tracking-widest bg-white border-2 border-ink rounded-xl py-3 text-ink focus:outline-none focus:ring-2 focus:ring-highlighter shadow-inner"
               autoFocus
             />
-            <div className="text-[11px] text-graphite font-mono pt-1 font-bold">
-              <span>Demo codes: <strong className="text-ink cursor-pointer underline" onClick={() => setJoinCode('CUET-902')}>CUET-902</strong> or <strong className="text-ink cursor-pointer underline" onClick={() => setJoinCode('RAOZ-404')}>RAOZ-404</strong></span>
+            <div className="text-[11px] text-graphite font-mono pt-1 font-bold flex items-center gap-1.5 flex-wrap">
+              <span>Try active codes:</span>
+              {displayCodes.map(code => (
+                <button
+                  type="button"
+                  key={code}
+                  onClick={() => setJoinCode(code)}
+                  className="px-2 py-0.5 bg-highlighter border border-ink rounded text-ink font-mono font-extrabold hover:bg-highlighter-hover transition-colors cursor-pointer"
+                >
+                  {code}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -91,12 +108,15 @@ export const JoinClassModal: React.FC<JoinClassModalProps> = ({ isOpen, onClose 
           )}
 
           <PillButton
+            type="submit"
             variant="highlighter"
             size="lg"
-            className="w-full btn-bounce"
+            disabled={isLoading || !joinCode.trim()}
+            onClick={() => handleJoin()}
+            className="w-full btn-bounce shadow-solid-sm"
             icon={<ArrowRight className="w-4 h-4" />}
           >
-            Verify & Join Classroom ➔
+            {isLoading ? 'Verifying Code...' : 'Verify & Join Classroom ➔'}
           </PillButton>
         </form>
 

@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useApp } from '../../context/AppContext';
+import { BlogPost, BlogComment } from '../../types';
 import { BentoCard } from '../common/BentoCard';
 import { PillButton } from '../common/PillButton';
 import { 
@@ -14,225 +16,231 @@ import {
   ArrowRight, 
   Search, 
   X, 
-  CheckCircle2,
-  GraduationCap,
-  MessageSquare,
-  Bookmark
+  CheckCircle2, 
+  GraduationCap, 
+  MessageSquare, 
+  Bookmark,
+  Trash2,
+  Edit3,
+  Flame,
+  Lightbulb,
+  Send,
+  ShieldCheck
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 
-export interface BlogPost {
-  id: string;
-  title: string;
-  subtitle: string;
-  category: 'Field Story' | 'Teaching Guide' | 'Olympiad Prep' | 'Engineering' | 'Curriculum';
-  coverImage: string;
-  author: {
-    name: string;
-    role: string;
-    avatar: string;
-    affiliation: string;
-  };
-  publishedAt: string;
-  readTime: string;
-  claps: number;
-  content: string[];
-  tags: string[];
-}
+export type { BlogPost };
 
 interface PublicBlogsPageProps {
   onOpenAuth: (tab: 'login' | 'signup') => void;
 }
 
 export const PublicBlogsPage: React.FC<PublicBlogsPageProps> = ({ onOpenAuth }) => {
+  const { 
+    blogs, 
+    addBlog, 
+    updateBlog, 
+    deleteBlog, 
+    clapBlog, 
+    reactToBlog, 
+    addBlogComment, 
+    deleteBlogComment, 
+    currentUser, 
+    activeMode 
+  } = useApp();
+
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
   const [writeModalOpen, setWriteModalOpen] = useState<boolean>(false);
-  const [clappedPosts, setClappedPosts] = useState<Record<string, number>>({});
+  const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
 
-  // Seed Blog Articles
-  const [posts, setPosts] = useState<BlogPost[]>([
-    {
-      id: 'blog-01',
-      title: 'The Chalk & Paper Revolution: Why 90% of Bangladesh’s Future Coders Don’t Need Laptops to Start',
-      subtitle: 'How handwriting syntax on paper khata bridges the digital divide faster than building expensive computer labs.',
-      category: 'Field Story',
-      coverImage: 'https://images.unsplash.com/photo-1577896851231-70ef18881754?w=800&auto=format&fit=crop&q=80',
-      author: {
-        name: 'Engr. Nusrat Jahan',
-        role: 'Curriculum Lead',
-        avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
-        affiliation: 'CUET EdTech Research Lab'
-      },
-      publishedAt: 'Aug 18, 2026',
-      readTime: '6 min read',
-      claps: 142,
-      tags: ['DigitalDivide', 'RuralEdTech', 'NCTB', 'Python'],
-      content: [
-        'When we first visited government high schools in Sunamganj haor region, we discovered a stark reality: 45 students shared two broken desktop computers with missing keyboard keys. During frequent monsoon power cuts, the computer room remained completely locked.',
-        'Yet, every single student had a notebook, a ballpoint pen, and a thirst to learn. That was when we realized: coding is not about mechanical keyboards—coding is about logical thinking, algorithmic precision, and structured problem solving.',
-        'By allowing students to handwrite clean Python and C code on regular ruled paper, we eliminated the multi-thousand dollar hardware bottleneck. A single teacher with a budget smartphone can scan an entire classroom’s homework in 2 minutes, running automated unit tests on our cloud sandboxes.',
-        'The results have been astonishing: students in rural schools are now solving loop and array problems with higher conceptual retention than urban students who rely on copy-pasting code on PCs.'
-      ]
-    },
-    {
-      id: 'blog-02',
-      title: 'How to Train for the Bangladesh Olympiad in Informatics (BdOI) on Pen & Paper',
-      subtitle: 'A step-by-step training blueprint for high schoolers without full-time computer lab access.',
-      category: 'Olympiad Prep',
-      coverImage: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=80',
-      author: {
-        name: 'Tanvir Hossain',
-        role: 'BdOI Finalist & Student',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-        affiliation: 'Chittagong Collegiate School'
-      },
-      publishedAt: 'Aug 12, 2026',
-      readTime: '8 min read',
-      claps: 238,
-      tags: ['CompetitiveProgramming', 'BdOI', 'C++', 'Algorithms'],
-      content: [
-        'Many beginners believe you need dual monitors and fancy mechanical keyboards to practice competitive programming. I qualified for the National Olympiad in Informatics preliminary round by doing 80% of my practice on 50-Taka exercise khatas.',
-        'When you write code on paper, you cannot rely on IDE auto-complete or endless trial-and-error runs. You are forced to dry-run loops in your head, track variable states in margin tables, and calculate time complexity before pen touches paper.',
-        'Here is my daily 3-step routine: 1) Read the algorithm problem statement; 2) Handwrite the C++ STL logic and dry-run with test values; 3) Scan the page with PaperCode to instantly verify if it passes edge cases.',
-        'Paper coding built my algorithmic muscle memory far better than typing ever did.'
-      ]
-    },
-    {
-      id: 'blog-03',
-      title: 'Under the Hood of PaperCode: How Our AST Engine Reads Smudged Bangla & Pencil Handwriting',
-      subtitle: 'The machine learning and lexical parsing architecture that achieves 98.4% OCR accuracy on low-end Androids.',
-      category: 'Engineering',
-      coverImage: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800&auto=format&fit=crop&q=80',
-      author: {
-        name: 'Redwan Ahmed',
-        role: 'Lead Architect',
-        avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150',
-        affiliation: 'CUET CSE Alum'
-      },
-      publishedAt: 'Aug 05, 2026',
-      readTime: '10 min read',
-      claps: 310,
-      tags: ['MachineLearning', 'OCR', 'Compilers', 'CloudSandbox'],
-      content: [
-        'Transcribing handwritten computer code is fundamentally different from scanning handwritten prose. In standard literature, a missing comma or quotation mark is a typo; in Python or C++, a missing colon or unmatched parenthesis crashes the compiler entirely.',
-        'Our optical pipeline utilizes a 2-stage architecture: Stage 1 performs perspective rectification and line segmentation using adaptive binarization that filters out background notebook grid lines and haor humidity smudges.',
-        'Stage 2 passes candidate tokens through an Abstract Syntax Tree (AST) grammar repair model. If a student writes "for i in range(5)" and leaves out the trailing colon, the parser detects the loop structure and suggests syntax correction with confidence metrics.',
-        'The sanitized code is then dispatched to secure micro-sandboxes, executing test cases in under 0.028 seconds and streaming stdout directly back to the mobile web interface.'
-      ]
-    },
-    {
-      id: 'blog-04',
-      title: 'A Teacher’s Field Report: Grading 120 Handwritten C Programs in 10 Minutes',
-      subtitle: 'Eliminating teacher burnout and manual paper grading in high school ICT practical exams.',
-      category: 'Teaching Guide',
-      coverImage: 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=800&auto=format&fit=crop&q=80',
-      author: {
-        name: 'Dr. Rafiqul Islam',
-        role: 'Senior Academic Advisor',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-        affiliation: 'CUET & Curriculum Committee'
-      },
-      publishedAt: 'Jul 29, 2026',
-      readTime: '5 min read',
-      claps: 185,
-      tags: ['TeacherTools', 'BatchGrading', 'HSC_ICT', 'EducationReform'],
-      content: [
-        'For decades, Bangladeshi ICT teachers faced an impossible dilemma during practical exams: either spend 6 hours manually reading handwriting on paper, or watch 80 students crowd around 4 working lab PCs.',
-        'With PaperCode’s batch grading workflow, teachers simply take continuous photos of student answer scripts. The AI automatically groups submissions by assignment ID, runs test cases against the official rubric, and flags edge case errors with visual diffs.',
-        'Teachers maintain complete control to apply class-wide curves, adjust partial points, and export certified grade sheets to Excel with a single click.',
-        'This gives teachers their evenings back and provides students with instantaneous feedback while the concepts are still fresh in their minds.'
-      ]
-    },
-    {
-      id: 'blog-05',
-      title: 'Mastering NCTB Class 9-10 ICT Chapter 5: Key Flowcharts and Algorithms on Paper',
-      subtitle: 'The must-know programs for secondary board exams: Prime numbers, Fibonacci, and Factorials.',
-      category: 'Curriculum',
-      coverImage: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&auto=format&fit=crop&q=80',
-      author: {
-        name: 'Dr. Sumaiya Parveen',
-        role: 'Senior Moderator',
-        avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150',
-        affiliation: 'National Curriculum Board'
-      },
-      publishedAt: 'Jul 20, 2026',
-      readTime: '7 min read',
-      claps: 195,
-      tags: ['Class9_10', 'Chapter5', 'Flowcharts', 'SSC_ICT'],
-      content: [
-        'Chapter 5 of the National Secondary ICT textbook is where students transition from computer literacy to computational thinking. Yet, many students struggle with abstract syntax when taught only on whiteboards.',
-        'In this guide, we break down the 5 cornerstone algorithms required for the SSC practical exam: 1) Determining Prime Numbers with modulo loops; 2) Generating the Fibonacci series; 3) Calculating Factorials; 4) Checking Leap Years; and 5) Finding the Greatest Common Divisor (GCD).',
-        'By drafting the flowchart on the left page of your khata and the corresponding Python code on the right page, you develop an unbreakable link between logic flow and syntax rules.'
-      ]
-    }
-  ]);
-
-  // Form State for Submitting New Article
+  // Form State for Submitting / Editing Article
   const [newTitle, setNewTitle] = useState('');
   const [newSubtitle, setNewSubtitle] = useState('');
   const [newCategory, setNewCategory] = useState<'Field Story' | 'Teaching Guide' | 'Olympiad Prep' | 'Engineering' | 'Curriculum'>('Field Story');
   const [newAuthorName, setNewAuthorName] = useState('');
   const [newAffiliation, setNewAffiliation] = useState('');
+  const [newCoverImage, setNewCoverImage] = useState('https://images.unsplash.com/photo-1577896851231-70ef18881754?w=800&auto=format&fit=crop&q=80');
   const [newContent, setNewContent] = useState('');
   const [newTags, setNewTags] = useState('');
 
+  // Comment input state
+  const [commentText, setCommentText] = useState('');
+
   const categories = ['All', 'Field Story', 'Teaching Guide', 'Olympiad Prep', 'Engineering', 'Curriculum'];
 
-  const filteredPosts = posts.filter(post => {
+  const coverPresets = [
+    { label: 'Rural School', url: 'https://images.unsplash.com/photo-1577896851231-70ef18881754?w=800&auto=format&fit=crop&q=80' },
+    { label: 'Olympiad Prep', url: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=80' },
+    { label: 'Code & Screen', url: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800&auto=format&fit=crop&q=80' },
+    { label: 'Teacher Classroom', url: 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=800&auto=format&fit=crop&q=80' },
+    { label: 'Notebook & Pen', url: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?w=800&auto=format&fit=crop&q=80' }
+  ];
+
+  const filteredPosts = (blogs || []).filter(post => {
+    if (post.isPublished === false && currentUser?.role !== 'admin') return false;
     const matchesCat = selectedCategory === 'All' || post.category === selectedCategory;
     const matchesSearch = 
       (post?.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (post?.subtitle || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (post?.author?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.tags.some(t => t.toLowerCase().includes(searchTerm.toLowerCase()));
+      (post.tags || []).some(t => t.toLowerCase().includes(searchTerm.toLowerCase()));
     return matchesCat && matchesSearch;
   });
 
-  const handleClap = (postId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setClappedPosts(prev => ({
-      ...prev,
-      [postId]: (prev[postId] || 0) + 1
-    }));
-    setPosts(prev => prev.map(p => p.id === postId ? { ...p, claps: p.claps + 1 } : p));
-    if (selectedPost && selectedPost.id === postId) {
-      setSelectedPost(prev => prev ? { ...prev, claps: prev.claps + 1 } : null);
+  const canManagePost = (post: BlogPost): boolean => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'admin' || currentUser.role === 'moderator') return true;
+    if (post.authorId && post.authorId === currentUser.id) return true;
+    if (post.authorEmail && post.authorEmail === currentUser.email) return true;
+    if (post.author?.name && post.author.name.toLowerCase() === currentUser.name.toLowerCase()) return true;
+    return false;
+  };
+
+  const handleOpenWrite = () => {
+    setEditingPost(null);
+    setNewTitle('');
+    setNewSubtitle('');
+    setNewCategory('Field Story');
+    setNewAuthorName(currentUser?.name || '');
+    setNewAffiliation(currentUser?.school || 'PaperCode Community Member');
+    setNewCoverImage('https://images.unsplash.com/photo-1577896851231-70ef18881754?w=800&auto=format&fit=crop&q=80');
+    setNewContent('');
+    setNewTags('');
+    setWriteModalOpen(true);
+  };
+
+  const handleOpenEdit = (post: BlogPost, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setEditingPost(post);
+    setNewTitle(post.title);
+    setNewSubtitle(post.subtitle || '');
+    setNewCategory((post.category as any) || 'Field Story');
+    setNewAuthorName(post.author?.name || currentUser?.name || '');
+    setNewAffiliation(post.author?.affiliation || currentUser?.school || '');
+    setNewCoverImage(post.coverImage || 'https://images.unsplash.com/photo-1577896851231-70ef18881754?w=800&auto=format&fit=crop&q=80');
+    setNewContent(Array.isArray(post.content) ? post.content.join('\n\n') : (post.content || ''));
+    setNewTags((post.tags || []).join(', '));
+    setWriteModalOpen(true);
+  };
+
+  const handleDeletePost = (postId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this blog post?')) {
+      deleteBlog(postId);
+      if (selectedPost && selectedPost.id === postId) {
+        setSelectedPost(null);
+      }
     }
   };
 
-  const handleCreatePost = (e: React.FormEvent) => {
+  const handleSavePost = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle.trim() || !newContent.trim() || !newAuthorName.trim()) return;
+    if (!newTitle.trim() || !newContent.trim()) return;
 
-    const newPost: BlogPost = {
-      id: 'blog-' + Date.now(),
-      title: newTitle.trim(),
-      subtitle: newSubtitle.trim() || 'A community article shared on PaperCode Bangladesh.',
-      category: newCategory,
-      coverImage: 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&auto=format&fit=crop&q=80',
-      author: {
-        name: newAuthorName.trim(),
-        role: 'Community Author',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-        affiliation: newAffiliation.trim() || 'PaperCode Community Member'
-      },
-      publishedAt: 'Today',
-      readTime: Math.max(3, Math.ceil(newContent.split(' ').length / 150)) + ' min read',
-      claps: 1,
-      tags: newTags ? newTags.split(',').map(t => t.trim().replace(/^#/, '')) : ['CommunityArticle', 'PaperCode'],
-      content: newContent.split('\n\n').filter(Boolean)
+    const contentParagraphs = newContent.split('\n\n').filter(p => p.trim().length > 0);
+    const tagsArray = newTags ? newTags.split(',').map(t => t.trim().replace(/^#/, '')).filter(Boolean) : ['PaperCode', 'Community'];
+    const readTimeCalc = Math.max(2, Math.ceil(newContent.split(/\s+/).length / 150)) + ' min read';
+
+    if (editingPost) {
+      const updatedData: Partial<BlogPost> = {
+        title: newTitle.trim(),
+        subtitle: newSubtitle.trim(),
+        category: newCategory,
+        coverImage: newCoverImage,
+        author: {
+          name: newAuthorName.trim() || currentUser?.name || 'Author',
+          role: editingPost.author?.role || (currentUser.role === 'teacher' ? 'Educator' : (currentUser.role === 'admin' ? 'Editorial Lead' : 'Student Contributor')),
+          avatar: editingPost.author?.avatar || currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+          affiliation: newAffiliation.trim() || currentUser.school || 'PaperCode'
+        },
+        readTime: readTimeCalc,
+        tags: tagsArray,
+        content: contentParagraphs
+      };
+
+      updateBlog(editingPost.id, updatedData);
+      setWriteModalOpen(false);
+      setEditingPost(null);
+      if (selectedPost && selectedPost.id === editingPost.id) {
+        setSelectedPost({ ...selectedPost, ...updatedData });
+      }
+      confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+    } else {
+      const newPostData = {
+        title: newTitle.trim(),
+        subtitle: newSubtitle.trim() || 'A community article shared on PaperCode Bangladesh.',
+        category: newCategory,
+        coverImage: newCoverImage,
+        authorId: currentUser?.id,
+        authorEmail: currentUser?.email,
+        author: {
+          name: newAuthorName.trim() || currentUser?.name || 'Community Author',
+          role: currentUser.role === 'teacher' ? 'Teacher & Contributor' : (currentUser.role === 'admin' ? 'Platform Editorial' : 'Student Developer'),
+          avatar: currentUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+          affiliation: newAffiliation.trim() || currentUser?.school || 'PaperCode Community'
+        },
+        readTime: readTimeCalc,
+        tags: tagsArray,
+        content: contentParagraphs,
+        isPublished: true,
+        reactions: { applaud: 0, heart: 0, fire: 0, idea: 0 },
+        comments: []
+      };
+
+      const created = addBlog(newPostData as any);
+      setWriteModalOpen(false);
+      setSelectedPost(created);
+      confetti({ particleCount: 70, spread: 70, origin: { y: 0.6 } });
+    }
+  };
+
+  const handleReact = (postId: string, reaction: 'applaud' | 'heart' | 'fire' | 'idea', e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    reactToBlog(postId, reaction);
+    if (selectedPost && selectedPost.id === postId) {
+      const curr = selectedPost.reactions || { applaud: selectedPost.claps || 0, heart: 0, fire: 0, idea: 0 };
+      setSelectedPost({
+        ...selectedPost,
+        claps: reaction === 'applaud' ? (selectedPost.claps || 0) + 1 : selectedPost.claps,
+        reactions: { ...curr, [reaction]: (curr[reaction] || 0) + 1 }
+      });
+    }
+  };
+
+  const handleAddComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPost || !commentText.trim()) return;
+
+    addBlogComment(selectedPost.id, commentText.trim());
+    
+    // Also update local selected post view immediately
+    const newCmt: BlogComment = {
+      id: 'cmt-' + Date.now(),
+      authorId: currentUser.id,
+      authorName: currentUser.name,
+      authorAvatar: currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      authorRole: currentUser.role === 'teacher' ? 'Teacher' : (currentUser.role === 'admin' ? 'Admin' : 'Student'),
+      text: commentText.trim(),
+      createdAt: 'Just now'
     };
 
-    setPosts(prev => [newPost, ...prev]);
-    setWriteModalOpen(false);
-    setNewTitle('');
-    setNewSubtitle('');
-    setNewContent('');
-    setNewAuthorName('');
-    setNewAffiliation('');
-    setNewTags('');
-    setSelectedPost(newPost);
+    setSelectedPost(prev => prev ? {
+      ...prev,
+      comments: [newCmt, ...(prev.comments || [])]
+    } : null);
+
+    setCommentText('');
+  };
+
+  const handleDeleteComment = (commentId: string) => {
+    if (!selectedPost) return;
+    deleteBlogComment(selectedPost.id, commentId);
+    setSelectedPost(prev => prev ? {
+      ...prev,
+      comments: (prev.comments || []).filter(c => c.id !== commentId)
+    } : null);
   };
 
   return (
@@ -249,7 +257,7 @@ export const PublicBlogsPage: React.FC<PublicBlogsPageProps> = ({ onOpenAuth }) 
             PaperCode Articles & Stories
           </h1>
           <p className="text-graphite text-base sm:text-lg">
-            Perspectives on bridging the rural digital divide, Olympiad training blueprints, teacher guides, and compiler engineering.
+            Community perspectives on bridging the rural digital divide, Olympiad training blueprints, teacher guides, and compiler engineering.
           </p>
         </div>
 
@@ -257,11 +265,11 @@ export const PublicBlogsPage: React.FC<PublicBlogsPageProps> = ({ onOpenAuth }) 
           <PillButton
             variant="primary"
             size="md"
-            onClick={() => setWriteModalOpen(true)}
+            onClick={handleOpenWrite}
             className="btn-bounce shadow-solid-sm flex-shrink-0"
             icon={<PenTool className="w-4 h-4" />}
           >
-            Write an Article ➔
+            + Write an Article
           </PillButton>
         </div>
       </div>
@@ -274,218 +282,217 @@ export const PublicBlogsPage: React.FC<PublicBlogsPageProps> = ({ onOpenAuth }) 
           {categories.map((cat) => (
             <button
               key={cat}
-              type="button"
               onClick={() => setSelectedCategory(cat)}
-              className={'px-4 py-2 rounded-full text-xs font-extrabold whitespace-nowrap transition-all btn-bounce ' + (selectedCategory === cat ? 'bg-highlighter text-ink border-2 border-ink shadow-solid-xs' : 'bg-paper-card text-graphite hover:text-ink border border-ink/20')}
+              className={'px-4 py-1.5 rounded-full font-mono text-xs font-bold transition-all whitespace-nowrap ' + 
+                (selectedCategory === cat 
+                  ? 'bg-ink text-white shadow-solid-xs' 
+                  : 'bg-paper-card border border-ink/30 text-graphite hover:border-ink hover:text-ink'
+                )}
             >
               {cat}
             </button>
           ))}
         </div>
 
-        {/* Search Bar */}
-        <div className="relative w-full sm:w-72 flex items-center">
-          <Search className="w-3.5 h-3.5 text-graphite absolute left-3 pointer-events-none" />
+        {/* Search Input */}
+        <div className="relative w-full sm:w-72">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-graphite" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search articles or authors..."
-            className="w-full pl-9 pr-4 py-2 rounded-xl border-2 border-ink bg-paper-card text-xs font-bold shadow-solid-xs focus:outline-none focus:ring-2 focus:ring-highlighter"
+            placeholder="Search articles, tags, authors..."
+            className="w-full pl-9 pr-4 py-2 bg-paper-card border-2 border-ink rounded-full text-xs font-bold placeholder:text-graphite focus:outline-none focus:ring-2 focus:ring-highlighter shadow-solid-xs"
           />
+          {searchTerm && (
+            <button 
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-graphite hover:text-ink text-xs font-bold"
+            >
+              ×
+            </button>
+          )}
         </div>
-
       </div>
-
-      {/* FEATURED HERO ARTICLE (if available) */}
-      {filteredPosts.length > 0 && selectedCategory === 'All' && !searchTerm && (
-        <div 
-          onClick={() => setSelectedPost(filteredPosts[0])}
-          className="cursor-pointer group"
-        >
-          <BentoCard variant="white" className="p-0 border-2 border-ink overflow-hidden group-hover:shadow-solid-lg transition-all">
-            <div className="grid grid-cols-1 lg:grid-cols-2">
-              
-              <div className="relative aspect-video lg:aspect-auto overflow-hidden bg-black/10">
-                <img
-                  src={filteredPosts[0].coverImage}
-                  alt={filteredPosts[0].title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute top-4 left-4 px-3 py-1 bg-highlighter border-2 border-ink rounded-full text-xs font-extrabold text-ink shadow-solid-xs">
-                  ⭐ Featured Story
-                </div>
-              </div>
-
-              <div className="p-6 sm:p-10 flex flex-col justify-between space-y-6">
-                
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2 text-xs font-mono font-bold text-graphite">
-                    <span className="text-stamp font-extrabold uppercase">{filteredPosts[0].category}</span>
-                    <span>•</span>
-                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {filteredPosts[0].readTime}</span>
-                    <span>•</span>
-                    <span>{filteredPosts[0].publishedAt}</span>
-                  </div>
-
-                  <h2 className="text-2xl sm:text-3xl font-extrabold text-ink leading-snug group-hover:text-stamp transition-colors">
-                    {filteredPosts[0].title}
-                  </h2>
-
-                  <p className="text-xs sm:text-sm text-graphite leading-relaxed line-clamp-3">
-                    {filteredPosts[0].subtitle}
-                  </p>
-                </div>
-
-                <div className="pt-4 border-t border-ink/15 flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <img
-                      src={filteredPosts[0].author.avatar}
-                      alt={filteredPosts[0].author.name}
-                      className="w-10 h-10 rounded-full border-2 border-ink object-cover"
-                    />
-                    <div>
-                      <strong className="text-xs text-ink block leading-none">{filteredPosts[0].author.name}</strong>
-                      <span className="text-[10px] text-graphite font-medium">{filteredPosts[0].author.affiliation}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <button
-                      type="button"
-                      onClick={(e) => handleClap(filteredPosts[0].id, e)}
-                      className="p-2 rounded-full border border-ink/30 hover:bg-highlighter text-ink flex items-center gap-1 text-xs font-mono font-bold transition-colors"
-                    >
-                      <Heart className={'w-4 h-4 text-stamp ' + (clappedPosts[filteredPosts[0].id] ? 'fill-stamp' : '')} />
-                      <span>{filteredPosts[0].claps}</span>
-                    </button>
-                    <span className="text-xs font-bold text-stamp group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">
-                      Read ➔
-                    </span>
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-          </BentoCard>
-        </div>
-      )}
 
       {/* ARTICLES GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {(selectedCategory === 'All' && !searchTerm ? filteredPosts.slice(1) : filteredPosts).map((post) => (
-          <BentoCard
-            key={post.id}
-            variant="white"
-            className="p-0 border-2 border-ink overflow-hidden group hover:shadow-solid-lg transition-all flex flex-col justify-between cursor-pointer"
-            onClick={() => setSelectedPost(post)}
-          >
-            <div className="space-y-4">
-              
-              {/* Cover Thumbnail */}
-              <div className="relative aspect-video overflow-hidden border-b-2 border-ink bg-black/10">
-                <img
-                  src={post.coverImage}
-                  alt={post.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                <div className="absolute top-2.5 left-2.5 px-2.5 py-0.5 bg-highlighter border border-ink rounded-full text-[10px] font-extrabold text-ink shadow-solid-xs">
-                  {post.category}
-                </div>
-              </div>
+        {filteredPosts.map((post) => {
+          const isOwnerOrAdmin = canManagePost(post);
+          const reactions = post.reactions || { applaud: post.claps || 0, heart: 0, fire: 0, idea: 0 };
 
-              {/* Title & Excerpt */}
-              <div className="p-5 space-y-2.5">
-                <div className="flex items-center space-x-2 text-[11px] font-mono font-bold text-graphite">
-                  <Clock className="w-3 h-3 text-stamp" />
+          return (
+            <BentoCard
+              key={post.id}
+              variant="white"
+              onClick={() => setSelectedPost(post)}
+              className="p-6 border-2 border-ink shadow-solid-md hover:shadow-solid-lg transition-all space-y-4 flex flex-col justify-between cursor-pointer group relative"
+            >
+              <div className="space-y-3">
+                {/* Cover Image */}
+                <div className="rounded-xl overflow-hidden border border-ink/30 aspect-video relative">
+                  <img
+                    src={post.coverImage || 'https://images.unsplash.com/photo-1577896851231-70ef18881754?w=800&auto=format&fit=crop&q=80'}
+                    alt={post.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute top-2 left-2">
+                    <span className="px-2.5 py-0.5 bg-paper/90 backdrop-blur-sm border border-ink rounded-full text-[10px] font-mono font-extrabold text-ink shadow-solid-xs">
+                      {post.category}
+                    </span>
+                  </div>
+
+                  {/* Owner Action Buttons (Top Right) */}
+                  {isOwnerOrAdmin && (
+                    <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-paper/95 backdrop-blur-sm border border-ink rounded-lg p-1 shadow-solid-xs">
+                      <button
+                        type="button"
+                        onClick={(e) => handleOpenEdit(post, e)}
+                        className="p-1 rounded hover:bg-highlighter text-ink transition-colors"
+                        title="Edit Article"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeletePost(post.id, e)}
+                        className="p-1 rounded hover:bg-red-100 text-red-600 transition-colors"
+                        title="Delete Article"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Read Time & Date */}
+                <div className="flex items-center justify-between text-[11px] font-mono text-graphite">
                   <span>{post.readTime}</span>
-                  <span>•</span>
                   <span>{post.publishedAt}</span>
                 </div>
 
-                <h3 className="text-lg font-extrabold text-ink leading-snug group-hover:text-stamp transition-colors">
-                  {post.title}
-                </h3>
-
-                <p className="text-xs text-graphite line-clamp-3 leading-relaxed">
-                  {post.subtitle}
-                </p>
-
-                {/* Tags */}
-                <div className="flex items-center gap-1.5 flex-wrap pt-2">
-                  {post.tags.slice(0, 3).map((tag, i) => (
-                    <span key={i} className="text-[10px] font-mono font-bold text-graphite bg-paper-muted px-2 py-0.5 rounded-md border border-ink/15">
-                      #{tag}
-                    </span>
-                  ))}
+                {/* Title & Subtitle */}
+                <div>
+                  <h3 className="text-lg font-extrabold text-ink group-hover:text-stamp transition-colors line-clamp-2 leading-tight">
+                    {post.title}
+                  </h3>
+                  {post.subtitle && (
+                    <p className="text-xs text-graphite mt-1.5 line-clamp-2 leading-relaxed font-medium">
+                      {post.subtitle}
+                    </p>
+                  )}
                 </div>
               </div>
 
-            </div>
+              {/* Author Info & Reaction Bar */}
+              <div className="pt-3 border-t border-ink/15 flex items-center justify-between gap-2">
+                <div className="flex items-center space-x-2 min-w-0">
+                  <img
+                    src={post.author?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
+                    alt={post.author?.name || 'Author'}
+                    className="w-7 h-7 rounded-full border border-ink object-cover flex-shrink-0"
+                  />
+                  <div className="overflow-hidden">
+                    <strong className="text-ink text-xs block leading-none truncate max-w-[110px]">{post.author?.name}</strong>
+                    <span className="text-[9px] text-graphite font-mono truncate block">{post.author?.role || 'Author'}</span>
+                  </div>
+                </div>
 
-            {/* Author Footer */}
-            <div className="p-5 pt-0 border-t border-ink/15 mt-4 pt-3 flex items-center justify-between text-xs">
-              <div className="flex items-center space-x-2.5">
-                <img
-                  src={post.author.avatar}
-                  alt={post.author.name}
-                  className="w-7 h-7 rounded-full border border-ink object-cover"
-                />
-                <div className="overflow-hidden">
-                  <strong className="text-ink text-xs block leading-none truncate max-w-[130px]">{post.author.name}</strong>
-                  <span className="text-[9px] text-graphite font-mono truncate block">{post.author.role}</span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={(e) => handleReact(post.id, 'applaud', e)}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-full border border-ink/20 hover:bg-highlighter text-ink font-mono text-xs font-bold transition-colors"
+                    title="Applaud"
+                  >
+                    <span>👏</span>
+                    <span>{reactions.applaud || post.claps || 0}</span>
+                  </button>
+
+                  <div className="flex items-center gap-1 text-[11px] font-mono font-bold text-graphite">
+                    <MessageSquare className="w-3.5 h-3.5 text-stamp" />
+                    <span>{post.comments?.length || 0}</span>
+                  </div>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={(e) => handleClap(post.id, e)}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-ink/20 hover:bg-highlighter text-ink font-mono text-xs font-bold transition-colors"
-              >
-                <Heart className={'w-3.5 h-3.5 text-stamp ' + (clappedPosts[post.id] ? 'fill-stamp' : '')} />
-                <span>{post.claps}</span>
-              </button>
-            </div>
-
-          </BentoCard>
-        ))}
+            </BentoCard>
+          );
+        })}
       </div>
 
+      {/* CLEAN EMPTY STATE */}
       {filteredPosts.length === 0 && (
-        <div className="p-12 bg-paper-card border-2 border-ink rounded-2xl text-center space-y-3">
-          <p className="text-base font-bold text-ink">No articles found matching &quot;{searchTerm}&quot; in {selectedCategory}.</p>
-          <button
-            onClick={() => { setSearchTerm(''); setSelectedCategory('All'); }}
-            className="text-xs font-extrabold text-stamp hover:underline"
-          >
-            Clear filters & view all articles ➔
-          </button>
+        <div className="p-12 sm:p-16 bg-paper-card border-2 border-ink rounded-[24px] text-center space-y-4 shadow-solid-md max-w-2xl mx-auto">
+          <div className="w-16 h-16 rounded-2xl bg-highlighter border-2 border-ink flex items-center justify-center text-ink mx-auto shadow-solid-xs text-3xl">
+            ✍️
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="text-xl sm:text-2xl font-extrabold text-ink">No articles found in this section</h3>
+            <p className="text-xs sm:text-sm text-graphite font-medium max-w-md mx-auto">
+              Share your insights, classroom teaching stories, or Olympiad tips with learners and educators across Bangladesh.
+            </p>
+          </div>
+          <div className="pt-2">
+            <PillButton
+              variant="primary"
+              size="md"
+              onClick={handleOpenWrite}
+              className="btn-bounce shadow-solid-xs"
+              icon={<PenTool className="w-4 h-4" />}
+            >
+              + Write the First Article
+            </PillButton>
+          </div>
         </div>
       )}
 
-      {/* FULL ARTICLE READER MODAL */}
+      {/* FULL ARTICLE READER & DISCUSSION MODAL */}
       {selectedPost && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
           <div className="relative w-full max-w-3xl bg-paper-card border-3 border-ink rounded-[28px] p-6 sm:p-10 shadow-solid-xl space-y-6 max-h-[90vh] overflow-y-auto">
             
-            {/* Header & Close */}
+            {/* Header, Categories & Actions */}
             <div className="flex items-start justify-between gap-4 border-b-2 border-ink/15 pb-4">
               <div className="space-y-1">
-                <span className="px-3 py-1 bg-highlighter border border-ink rounded-full text-xs font-extrabold text-ink">
-                  {selectedPost.category}
-                </span>
-                <span className="text-xs font-mono text-graphite pl-2">
-                  {selectedPost.readTime} • {selectedPost.publishedAt}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 bg-highlighter border border-ink rounded-full text-xs font-extrabold text-ink">
+                    {selectedPost.category}
+                  </span>
+                  <span className="text-xs font-mono text-graphite">
+                    {selectedPost.readTime} • {selectedPost.publishedAt}
+                  </span>
+                </div>
               </div>
-              <button
-                onClick={() => setSelectedPost(null)}
-                className="p-2 rounded-full border-2 border-ink bg-paper-muted hover:bg-red-100 text-ink transition-colors flex-shrink-0"
-                aria-label="Close article"
-              >
-                <X className="w-5 h-5" />
-              </button>
+
+              <div className="flex items-center gap-2">
+                {canManagePost(selectedPost) && (
+                  <>
+                    <button
+                      onClick={() => handleOpenEdit(selectedPost)}
+                      className="px-3 py-1.5 rounded-lg border-2 border-ink bg-white hover:bg-highlighter text-ink text-xs font-extrabold flex items-center gap-1 transition-colors shadow-solid-xs"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      onClick={() => handleDeletePost(selectedPost.id)}
+                      className="px-3 py-1.5 rounded-lg border-2 border-ink bg-white hover:bg-red-100 text-red-600 text-xs font-extrabold flex items-center gap-1 transition-colors shadow-solid-xs"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete</span>
+                    </button>
+                  </>
+                )}
+
+                <button
+                  onClick={() => setSelectedPost(null)}
+                  className="p-2 rounded-full border-2 border-ink bg-paper-muted hover:bg-red-100 text-ink transition-colors flex-shrink-0"
+                  aria-label="Close article"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Title & Subtitle */}
@@ -493,44 +500,75 @@ export const PublicBlogsPage: React.FC<PublicBlogsPageProps> = ({ onOpenAuth }) 
               <h2 className="text-2xl sm:text-4xl font-extrabold text-ink leading-tight">
                 {selectedPost.title}
               </h2>
-              <p className="text-sm sm:text-base text-graphite font-medium leading-relaxed">
-                {selectedPost.subtitle}
-              </p>
+              {selectedPost.subtitle && (
+                <p className="text-sm sm:text-base text-graphite font-medium leading-relaxed">
+                  {selectedPost.subtitle}
+                </p>
+              )}
             </div>
 
-            {/* Author Profile Card */}
-            <div className="p-4 bg-paper-muted rounded-2xl border-2 border-ink/20 flex items-center justify-between gap-3">
+            {/* Author Profile Card & Multi-Emoji Reaction Toolbar */}
+            <div className="p-4 bg-paper-muted rounded-2xl border-2 border-ink/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center space-x-3">
                 <img
-                  src={selectedPost.author.avatar}
-                  alt={selectedPost.author.name}
+                  src={selectedPost.author?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
+                  alt={selectedPost.author?.name || 'Author'}
                   className="w-12 h-12 rounded-full border-2 border-ink object-cover"
                 />
                 <div>
-                  <strong className="text-sm text-ink block">{selectedPost.author.name}</strong>
-                  <span className="text-xs text-stamp font-bold block">{selectedPost.author.role}</span>
-                  <span className="text-[11px] font-mono text-graphite">{selectedPost.author.affiliation}</span>
+                  <strong className="text-sm text-ink block">{selectedPost.author?.name}</strong>
+                  <span className="text-xs text-stamp font-bold block">{selectedPost.author?.role}</span>
+                  <span className="text-[11px] font-mono text-graphite">{selectedPost.author?.affiliation}</span>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={(e) => handleClap(selectedPost.id, e)}
-                className="px-4 py-2 bg-highlighter hover:bg-highlighter-hover border-2 border-ink rounded-full text-xs font-extrabold text-ink flex items-center gap-1.5 shadow-solid-xs btn-bounce"
-              >
-                <Heart className="w-4 h-4 text-stamp fill-stamp" />
-                <span>Applaud ({selectedPost.claps})</span>
-              </button>
+              {/* Reactions Bar */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => handleReact(selectedPost.id, 'applaud')}
+                  className="px-3 py-1.5 bg-white hover:bg-highlighter border-2 border-ink rounded-full text-xs font-extrabold text-ink flex items-center gap-1.5 shadow-solid-xs btn-bounce"
+                >
+                  <span>👏</span>
+                  <span>{selectedPost.reactions?.applaud ?? selectedPost.claps ?? 0}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleReact(selectedPost.id, 'heart')}
+                  className="px-3 py-1.5 bg-white hover:bg-red-50 border-2 border-ink rounded-full text-xs font-extrabold text-ink flex items-center gap-1.5 shadow-solid-xs btn-bounce"
+                >
+                  <span>❤️</span>
+                  <span>{selectedPost.reactions?.heart ?? 0}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleReact(selectedPost.id, 'fire')}
+                  className="px-3 py-1.5 bg-white hover:bg-orange-50 border-2 border-ink rounded-full text-xs font-extrabold text-ink flex items-center gap-1.5 shadow-solid-xs btn-bounce"
+                >
+                  <span>🔥</span>
+                  <span>{selectedPost.reactions?.fire ?? 0}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleReact(selectedPost.id, 'idea')}
+                  className="px-3 py-1.5 bg-white hover:bg-yellow-50 border-2 border-ink rounded-full text-xs font-extrabold text-ink flex items-center gap-1.5 shadow-solid-xs btn-bounce"
+                >
+                  <span>💡</span>
+                  <span>{selectedPost.reactions?.idea ?? 0}</span>
+                </button>
+              </div>
             </div>
 
             {/* Cover Image */}
-            <div className="rounded-2xl overflow-hidden border-2 border-ink aspect-video max-h-80 w-full">
-              <img
-                src={selectedPost.coverImage}
-                alt={selectedPost.title}
-                className="w-full h-full object-cover"
-              />
-            </div>
+            {selectedPost.coverImage && (
+              <div className="rounded-2xl overflow-hidden border-2 border-ink aspect-video max-h-80 w-full">
+                <img
+                  src={selectedPost.coverImage}
+                  alt={selectedPost.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
 
             {/* Article Body Paragraphs */}
             <div className="space-y-4 text-sm sm:text-base text-ink leading-relaxed font-sans pt-2">
@@ -544,35 +582,101 @@ export const PublicBlogsPage: React.FC<PublicBlogsPageProps> = ({ onOpenAuth }) 
             {/* Tags */}
             <div className="pt-4 border-t border-ink/15 flex items-center gap-2 flex-wrap">
               <Tag className="w-4 h-4 text-stamp" />
-              {selectedPost.tags.map((tag, i) => (
+              {(selectedPost.tags || []).map((tag, i) => (
                 <span key={i} className="px-3 py-1 bg-paper-muted border border-ink/20 rounded-full text-xs font-mono font-bold text-ink">
                   #{tag}
                 </span>
               ))}
             </div>
 
-            {/* Call to Action Banner at bottom of article */}
-            <div className="p-6 bg-highlighter/20 border-2 border-ink rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
-              <div>
-                <strong className="text-base text-ink block font-extrabold">Ready to handwrite your first program?</strong>
-                <p className="text-xs text-graphite mt-0.5">Join thousands of students and teachers coding with pen and paper in Bangladesh.</p>
+            {/* INTERACTIVE COMMENTS SECTION */}
+            <div className="pt-6 border-t-2 border-ink/15 space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-extrabold text-ink flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5 text-stamp" />
+                  <span>Discussion & Comments ({selectedPost.comments?.length || 0})</span>
+                </h3>
               </div>
-              <PillButton
-                variant="primary"
-                size="md"
-                onClick={() => { setSelectedPost(null); onOpenAuth('signup'); }}
-                className="btn-bounce shadow-solid-xs flex-shrink-0"
-                icon={<GraduationCap className="w-4 h-4" />}
-              >
-                Sign Up Free ➔
-              </PillButton>
+
+              {/* Add Comment Form */}
+              <form onSubmit={handleAddComment} className="space-y-3 p-4 bg-paper-light border-2 border-ink rounded-2xl">
+                <div className="flex items-center space-x-2">
+                  <img
+                    src={currentUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
+                    alt={currentUser?.name || 'You'}
+                    className="w-7 h-7 rounded-full border border-ink object-cover"
+                  />
+                  <span className="text-xs font-bold text-ink">{currentUser?.name || 'Guest'}</span>
+                  <span className="text-[10px] font-mono text-stamp font-extrabold uppercase">({currentUser?.role || 'Student'})</span>
+                </div>
+                <textarea
+                  rows={2}
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder="Join the discussion... share your experience or ask a question"
+                  className="w-full p-3 rounded-xl border-2 border-ink text-xs font-medium bg-white focus:outline-none focus:ring-2 focus:ring-highlighter"
+                  required
+                />
+                <div className="flex justify-end">
+                  <PillButton
+                    variant="primary"
+                    size="sm"
+                    className="btn-bounce shadow-solid-xs"
+                    icon={<Send className="w-3.5 h-3.5" />}
+                  >
+                    Post Comment
+                  </PillButton>
+                </div>
+              </form>
+
+              {/* List of Comments */}
+              <div className="space-y-3">
+                {(selectedPost.comments || []).length === 0 ? (
+                  <p className="text-xs text-graphite font-medium italic text-center py-4">
+                    No comments yet. Be the first to leave a thought!
+                  </p>
+                ) : (
+                  (selectedPost.comments || []).map((cmt) => (
+                    <div key={cmt.id} className="p-3.5 bg-white border border-ink/30 rounded-xl space-y-1.5 relative group">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <img
+                            src={cmt.authorAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
+                            alt={cmt.authorName}
+                            className="w-6 h-6 rounded-full border border-ink object-cover"
+                          />
+                          <span className="text-xs font-extrabold text-ink">{cmt.authorName}</span>
+                          <span className="px-2 py-0.2 bg-highlighter/50 border border-ink/30 rounded-full text-[9px] font-mono font-bold text-ink">
+                            {cmt.authorRole || 'Member'}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-[10px] font-mono text-graphite">{cmt.createdAt}</span>
+                          {(cmt.authorId === currentUser?.id || currentUser?.role === 'admin') && (
+                            <button
+                              onClick={() => handleDeleteComment(cmt.id)}
+                              className="text-red-500 hover:text-red-700 text-xs p-1"
+                              title="Delete Comment"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-xs text-ink leading-relaxed pl-8 font-sans">
+                        {cmt.text}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
 
           </div>
         </div>
       )}
 
-      {/* WRITE AN ARTICLE MODAL (FOR EVERYONE) */}
+      {/* WRITE / EDIT ARTICLE MODAL */}
       {writeModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
           <div className="relative w-full max-w-2xl bg-paper-card border-3 border-ink rounded-[28px] p-6 sm:p-8 shadow-solid-xl space-y-6 max-h-[90vh] overflow-y-auto">
@@ -580,10 +684,10 @@ export const PublicBlogsPage: React.FC<PublicBlogsPageProps> = ({ onOpenAuth }) 
             <div className="flex items-center justify-between border-b-2 border-ink/15 pb-4">
               <div className="space-y-0.5">
                 <div className="doodle-badge bg-highlighter text-ink">
-                  <span>✍️ Community Contributor</span>
+                  <span>{editingPost ? '✏️ Editing Post' : '✍️ Community Contributor'}</span>
                 </div>
                 <h3 className="text-2xl font-extrabold text-ink pt-1">
-                  Write & Publish an Article
+                  {editingPost ? 'Edit Blog Post' : 'Write & Publish an Article'}
                 </h3>
               </div>
               <button
@@ -595,7 +699,7 @@ export const PublicBlogsPage: React.FC<PublicBlogsPageProps> = ({ onOpenAuth }) 
               </button>
             </div>
 
-            <form onSubmit={handleCreatePost} className="space-y-4">
+            <form onSubmit={handleSavePost} className="space-y-4">
               
               {/* Title */}
               <div className="space-y-1.5">
@@ -636,94 +740,99 @@ export const PublicBlogsPage: React.FC<PublicBlogsPageProps> = ({ onOpenAuth }) 
                   <select
                     value={newCategory}
                     onChange={e => setNewCategory(e.target.value as any)}
-                    className="w-full px-4 py-2.5 rounded-xl border-2 border-ink text-xs font-bold bg-white focus:outline-none focus:ring-2 focus:ring-highlighter"
+                    className="w-full px-3 py-2.5 rounded-xl border-2 border-ink text-xs font-bold bg-white focus:outline-none focus:ring-2 focus:ring-highlighter"
                   >
-                    <option value="Field Story">🌾 Field Story</option>
-                    <option value="Teaching Guide">👩‍🏫 Teaching Guide</option>
-                    <option value="Olympiad Prep">🏆 Olympiad Prep</option>
-                    <option value="Engineering">⚡ Engineering & Tech</option>
-                    <option value="Curriculum">📖 National Curriculum</option>
+                    <option value="Field Story">Field Story (Rural Schools)</option>
+                    <option value="Teaching Guide">Teaching Guide (Pedagogy)</option>
+                    <option value="Olympiad Prep">Olympiad Prep (BdOI & CP)</option>
+                    <option value="Engineering">Engineering (Compilers & OCR)</option>
+                    <option value="Curriculum">Curriculum (NCTB Guidelines)</option>
                   </select>
                 </div>
 
                 {/* Author Name */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-mono font-extrabold uppercase text-ink block">
-                    Your Name *
+                    Author Name
                   </label>
                   <input
                     type="text"
-                    required
                     value={newAuthorName}
                     onChange={e => setNewAuthorName(e.target.value)}
-                    placeholder="e.g. Nusrat Jahan"
+                    placeholder="Your Full Name"
                     className="w-full px-4 py-2.5 rounded-xl border-2 border-ink text-xs font-bold bg-white focus:outline-none focus:ring-2 focus:ring-highlighter"
                   />
                 </div>
 
               </div>
 
-              {/* Affiliation & Tags */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-mono font-extrabold uppercase text-ink block">
-                    School / Organization
-                  </label>
-                  <input
-                    type="text"
-                    value={newAffiliation}
-                    onChange={e => setNewAffiliation(e.target.value)}
-                    placeholder="e.g. Chittagong Collegiate School"
-                    className="w-full px-4 py-2.5 rounded-xl border-2 border-ink text-xs font-medium bg-white focus:outline-none focus:ring-2 focus:ring-highlighter"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-mono font-extrabold uppercase text-ink block">
-                    Tags (Comma-separated)
-                  </label>
-                  <input
-                    type="text"
-                    value={newTags}
-                    onChange={e => setNewTags(e.target.value)}
-                    placeholder="e.g. Python, NCTB, HaorRegion"
-                    className="w-full px-4 py-2.5 rounded-xl border-2 border-ink text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-highlighter"
-                  />
+              {/* Cover Photo Presets */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-mono font-extrabold uppercase text-ink block">
+                  Select Cover Image
+                </label>
+                <div className="grid grid-cols-5 gap-2">
+                  {coverPresets.map((preset, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setNewCoverImage(preset.url)}
+                      className={'rounded-lg overflow-hidden border-2 transition-all aspect-video ' + 
+                        (newCoverImage === preset.url ? 'border-stamp ring-2 ring-stamp scale-105' : 'border-ink/40 opacity-70 hover:opacity-100')}
+                    >
+                      <img src={preset.url} alt={preset.label} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Content */}
+              {/* Body Content */}
               <div className="space-y-1.5">
-                <label className="text-xs font-mono font-extrabold uppercase text-ink block">
-                  Article Content (Separate paragraphs with blank lines) *
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-mono font-extrabold uppercase text-ink block">
+                    Article Content (Paragraphs) *
+                  </label>
+                  <span className="text-[10px] font-mono text-graphite">Separate paragraphs with double Enter</span>
+                </div>
                 <textarea
-                  required
                   rows={6}
+                  required
                   value={newContent}
                   onChange={e => setNewContent(e.target.value)}
-                  placeholder="Write your article thoughts, experience, or teaching tips here..."
-                  className="w-full p-4 rounded-xl border-2 border-ink text-xs font-sans leading-relaxed bg-white focus:outline-none focus:ring-2 focus:ring-highlighter"
+                  placeholder="Share your story, insights, or coding tutorial here..."
+                  className="w-full px-4 py-3 rounded-xl border-2 border-ink text-xs font-normal bg-white focus:outline-none focus:ring-2 focus:ring-highlighter font-sans"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-2">
+              {/* Tags */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-mono font-extrabold uppercase text-ink block">
+                  Tags (Comma separated)
+                </label>
+                <input
+                  type="text"
+                  value={newTags}
+                  onChange={e => setNewTags(e.target.value)}
+                  placeholder="e.g. Python, DigitalDivide, NCTB, HaorRegion"
+                  className="w-full px-4 py-2.5 rounded-xl border-2 border-ink text-xs font-medium bg-white focus:outline-none focus:ring-2 focus:ring-highlighter"
+                />
+              </div>
+
+              {/* Buttons */}
+              <div className="pt-4 border-t-2 border-ink/15 flex items-center justify-end space-x-3">
                 <button
                   type="button"
                   onClick={() => setWriteModalOpen(false)}
-                  className="px-4 py-2 text-xs font-bold text-graphite hover:text-ink"
+                  className="px-5 py-2 rounded-full border-2 border-ink bg-paper-muted font-bold text-xs hover:bg-paper-light text-ink"
                 >
                   Cancel
                 </button>
-
                 <PillButton
-                  type="submit"
                   variant="primary"
                   size="md"
-                  icon={<PenTool className="w-4 h-4" />}
                   className="btn-bounce shadow-solid-xs"
                 >
-                  Publish Article ➔
+                  {editingPost ? 'Save Changes ➔' : 'Publish Article ➔'}
                 </PillButton>
               </div>
 

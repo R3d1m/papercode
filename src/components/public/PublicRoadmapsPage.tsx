@@ -25,9 +25,11 @@ export const PublicRoadmapsPage: React.FC<PublicRoadmapsPageProps> = ({ onOpenAu
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredRoadmaps = roadmaps.filter(r => 
-    (r?.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (r?.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (r?.targetAudience || '').toLowerCase().includes(searchTerm.toLowerCase())
+    r.isPublic !== false && (
+      (r?.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (r?.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (r?.targetAudience || '').toLowerCase().includes(searchTerm.toLowerCase())
+    )
   );
 
   return (

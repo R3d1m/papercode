@@ -8,11 +8,13 @@ import { BookOpen, KeyRound, Award, ArrowRight, Play, Sparkles } from 'lucide-re
 interface StudentDashboardProps {
   onOpenLesson: (lesson?: Lesson) => void;
   onOpenJoinModal: () => void;
+  onOpenCourseDetail?: (course: Course) => void;
 }
 
 export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   onOpenLesson,
-  onOpenJoinModal
+  onOpenJoinModal,
+  onOpenCourseDetail
 }) => {
   const { courses, completedLessonIds, setActiveLesson, enrollInCourse } = useApp();
 
@@ -34,12 +36,16 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     return { completed, total, percent };
   };
 
-  const handleStartCourse = (course: Course) => {
-    enrollInCourse(course.id);
-    const resumeLesson = getCourseResumeLesson(course);
-    if (resumeLesson) {
-      setActiveLesson(resumeLesson);
-      onOpenLesson(resumeLesson);
+  const handleStartOrViewCourse = (course: Course) => {
+    if (onOpenCourseDetail) {
+      onOpenCourseDetail(course);
+    } else {
+      enrollInCourse(course.id);
+      const resumeLesson = getCourseResumeLesson(course);
+      if (resumeLesson) {
+        setActiveLesson(resumeLesson);
+        onOpenLesson(resumeLesson);
+      }
     }
   };
 
@@ -94,7 +100,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
               <BentoCard
                 key={course.id}
                 variant="white"
-                className="space-y-5 p-7 border-2 border-ink shadow-solid-md hover:shadow-solid-lg transition-all flex flex-col justify-between"
+                onClick={() => handleStartOrViewCourse(course)}
+                className="space-y-5 p-7 border-2 border-ink shadow-solid-md hover:shadow-solid-lg transition-all flex flex-col justify-between cursor-pointer"
               >
                 <div className="space-y-4">
                   
@@ -148,7 +155,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                   <PillButton
                     variant={isStarted ? "highlighter" : "primary"}
                     size="md"
-                    onClick={() => handleStartCourse(course)}
+                    onClick={() => handleStartOrViewCourse(course)}
                     className="btn-bounce shadow-solid-xs"
                     icon={<Play className="w-3.5 h-3.5 fill-current" />}
                   >

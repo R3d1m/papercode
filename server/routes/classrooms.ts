@@ -153,14 +153,18 @@ router.post('/join', async (req: Request, res: Response) => {
     if (!code) return res.status(400).json({ success: false, message: 'Class Join Code is required.' });
 
     const formattedCode = code.trim().toUpperCase();
-    const result = await pool.query('SELECT * FROM classrooms WHERE UPPER(join_code) = $1', [formattedCode]);
+    const cleanCode = formattedCode.replace(/[^A-Z0-9]/g, '');
+    const result = await pool.query(
+      "SELECT * FROM classrooms WHERE UPPER(join_code) = $1 OR UPPER(REPLACE(join_code, '-', '')) = $2 OR UPPER(REPLACE(join_code, ' ', '')) = $2",
+      [formattedCode, cleanCode]
+    );
     
     if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Invalid or expired class join code (' + formattedCode + ').' });
+      return res.status(404).json({ success: false, message: 'Invalid or expired class join code (' + formattedCode + '). Please verify with your teacher.' });
     }
 
     const cls = result.rows[0];
-    const targetStudentId = studentId || 'usr-student-1';
+    const targetStudentId = studentId || ('usr-student-' + Date.now());
     const enrollId = 'enr-' + Date.now();
 
     // Ensure student exists in users table to satisfy foreign key
@@ -199,10 +203,11 @@ router.post('/join', async (req: Request, res: Response) => {
       classroom: {
         id: cls.id,
         name: cls.name,
-        gradeLevel: cls.grade,
+        gradeLevel: cls.grade || 'Class 9',
         subject: cls.subject,
         teacherId: cls.teacher_id,
         joinCode: cls.join_code,
+        courseIds: Array.isArray(cls.course_ids) ? cls.course_ids : (cls.course_ids ? [cls.course_ids] : []),
         student: studentInfo
       }
     });
