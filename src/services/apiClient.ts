@@ -546,6 +546,37 @@ export const apiClient = {
       if (res.ok) return await res.json();
     } catch (e) {}
     return { success: false };
+  },
+
+  async updateProfile(data: { userId?: string; email?: string; role?: string; name?: string; school?: string; division?: string; avatar?: string | null }) {
+    try {
+      const res = await fetch(API_BASE + '/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) return await res.json();
+      const errData = await res.json().catch(() => ({}));
+      return { success: false, message: errData.message || 'Failed to update profile' };
+    } catch (e: any) {
+      return { success: false, message: e.message || 'Network error' };
+    }
+  },
+
+  async changePassword(data: { userId: string; currentPassword: string; newPassword: string }) {
+    try {
+      const res = await fetch(API_BASE + '/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) return await res.json();
+      const errData = await res.json().catch(() => ({}));
+      return { success: false, message: errData.message || 'Failed to change password' };
+    } catch (e: any) {
+      return { success: false, message: e.message || 'Network error' };
+    }
   }
 };
+
 

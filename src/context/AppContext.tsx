@@ -134,7 +134,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [users, setUsers] = useState<User[]>(SEED_USERS);
   const [moderators, setModerators] = useState<User[]>(SEED_MODERATORS);
   const [classrooms, setClassrooms] = useState<Classroom[]>(SEED_CLASSROOMS);
-  const [courses, setCourses] = useState<Course[]>(SEED_COURSES);
+  const [courses, setCourses] = useState<Course[]>(() => {
+    try {
+      const saved = localStorage.getItem('papercode_courses_data');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return SEED_COURSES;
+  });
   const [roadmaps, setRoadmaps] = useState<Roadmap[]>(() => {
     try {
       const saved = localStorage.getItem('papercode_roadmaps_data');
@@ -172,7 +181,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAuthModalOpen(true);
   };
 
-  const closeAuthModal = () => setAuthModalOpen(false);
+    const closeAuthModal = () => setAuthModalOpen(false);
 
   const openJoinModal = () => {
     if (activeMode === 'marketing' || !currentUser || currentUser.id === 'usr-guest') {
@@ -184,7 +193,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const closeJoinModal = () => setJoinModalOpen(false);
 
-  // Sync completedLessonIds, roadmaps, and blogs to localStorage
+  // Sync courses, completedLessonIds, roadmaps, and blogs to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('papercode_courses_data', JSON.stringify(courses));
+    } catch {}
+  }, [courses]);
+
   useEffect(() => {
     try {
       localStorage.setItem('papercode_completed_lessons', JSON.stringify(completedLessonIds));
@@ -849,17 +864,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addModuleToCourse = (courseId: string, moduleData: any) => {
-    apiClient.createModule(courseId, moduleData);
+    const moduleId = moduleData.id || ('mod-' + Date.now());
+    const newMod: Module = {
+      id: moduleId,
+      title: moduleData.title || 'New Module',
+      description: moduleData.description || '',
+      category: moduleData.category || 'Core Concepts',
+      isPublished: true,
+      lessons: moduleData.lessons || []
+    };
+    apiClient.createModule(courseId, newMod).catch(() => {});
     setCourses(prev => prev.map(c => {
       if (c.id === courseId) {
-        const newMod: Module = {
-          id: 'mod-' + Date.now(),
-          title: moduleData.title || 'New Module',
-          description: moduleData.description || '',
-          category: moduleData.category || 'Core Concepts',
-          isPublished: true,
-          lessons: []
-        };
         return { ...c, modules: [...(c.modules || []), newMod] };
       }
       return c;
@@ -867,7 +883,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteModule = (courseId: string, moduleId: string) => {
-    apiClient.deleteModule(courseId, moduleId);
+    apiClient.deleteModule(courseId, moduleId).catch(() => {});
     setCourses(prev => prev.map(c => {
       if (c.id === courseId) {
         return { ...c, modules: (c.modules || []).filter(m => m.id !== moduleId) };
@@ -877,15 +893,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateLesson = (courseId: string, moduleId: string, lessonId: string, updatedLesson: Lesson) => {
+    // Persist to PostgreSQL backend
+    apiClient.createLesson(courseId, moduleId, updatedLesson).catch(err => {
+      console.warn('Backend lesson persist notification:', err);
+    });
+
     setCourses(prev => prev.map(c => {
       if (c.id === courseId) {
         return {
           ...c,
           modules: (c.modules || []).map(m => {
             if (m.id === moduleId) {
+              const currentLessons = m.lessons || [];
+              const existingIdx = currentLessons.findIndex(l => l.id === lessonId);
+              let updatedLessons: Lesson[];
+              if (existingIdx >= 0) {
+                updatedLessons = currentLessons.map(l => l.id === lessonId ? updatedLesson : l);
+              } else {
+                updatedLessons = [...currentLessons, updatedLesson];
+              }
               return {
                 ...m,
-                lessons: (m.lessons || []).map(l => l.id === lessonId ? updatedLesson : l)
+                lessons: updatedLessons
               };
             }
             return m;
@@ -1105,8 +1134,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateUserProfile = (data: Partial<User>) => {
-    setCurrentUser(prev => ({ ...prev, ...data }));
+    let updatedUser: User;
+    setCurrentUser(prev => {
+      updatedUser = { ...prev, ...data };
+      try {
+        localStorage.setItem('papercode_user_session', JSON.stringify(updatedUser));
+      } catch {}
+      return updatedUser;
+    });
+
     setUsers(prev => prev.map(u => u.id === currentUser.id ? { ...u, ...data } : u));
+
+    if (currentUser?.id || currentUser?.email) {
+      apiClient.updateProfile({
+        userId: currentUser.id,
+        email: currentUser.email,
+        role: currentUser.role,
+        name: data.name,
+        school: data.school,
+        division: data.division,
+        avatar: data.avatar
+      }).then(res => {
+        if (res && res.success && res.user) {
+          setCurrentUser(prev => {
+            const synced = { ...prev, ...res.user };
+            try {
+              localStorage.setItem('papercode_user_session', JSON.stringify(synced));
+            } catch {}
+            return synced;
+          });
+        }
+      }).catch(err => {
+        console.warn('Profile update API sync error:', err);
+      });
+    }
   };
 
   return (

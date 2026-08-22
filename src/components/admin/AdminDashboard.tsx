@@ -299,54 +299,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ initialTab = 'vi
       isPublished: true,
       authorId: currentUser.id,
       authorName: currentUser.name || 'Dr. Rafiqul Islam (Admin HQ)',
-      modules: [
-        {
-          id: 'mod-' + Date.now(),
-          title: 'Module 1: Foundations & Core Concepts',
-          description: 'Introduction to fundamentals with handwritten exercise problems.',
-          category: newCourseCategory,
-          isPublished: true,
-          lessons: [
-            {
-              id: 'les-' + Date.now(),
-              title: 'Lesson 1.1: Syntax & Variables on Paper',
-              subtitle: 'Fundamentals on ruled paper',
-              durationMinutes: 20,
-              xpReward: 100,
-              conceptNotes: ['Declare variables clearly on ruled paper'],
-              codeSnippet: newCourseLanguage === 'c' 
-                ? '#include <stdio.h>\n\nint main() {\n    printf("Hello PaperCode!\\n");\n    return 0;\n}'
-                : 'print("Hello from PaperCode Bangladesh!")',
-              theoryContent: 'Write the program cleanly on ruled paper notebook and scan with PaperCode OCR.',
-              mcq: {
-                id: 'mcq-1',
-                question: 'How do you run code on PaperCode?',
-                options: [
-                  { id: 'opt-1', text: 'Handwrite on paper and scan with phone' },
-                  { id: 'opt-2', text: 'Type only on desktop' }
-                ],
-                correctOptionId: 'opt-1',
-                explanation: 'PaperCode scans handwritten syntax directly from paper notebooks.'
-              },
-              exercise: {
-                id: 'ex-' + Date.now(),
-                title: 'Exercise 1: Hello PaperCode',
-                prompt: 'Write the code in your notebook, take a photo, and click Run Code.',
-                language: newCourseLanguage,
-                languageId: newCourseLanguage === 'c' ? 50 : 71,
-                starterCode: newCourseLanguage === 'c' 
-                  ? '#include <stdio.h>\n\nint main() {\n    printf("Hello PaperCode!\\n");\n    return 0;\n}'
-                  : 'print("Hello from PaperCode Bangladesh!")',
-                solutionSnippet: newCourseLanguage === 'c' 
-                  ? '#include <stdio.h>\n\nint main() {\n    printf("Hello PaperCode!\\n");\n    return 0;\n}'
-                  : 'print("Hello from PaperCode Bangladesh!")',
-                testCases: [{ id: 'tc-1', input: '', expectedOutput: 'Hello PaperCode!', description: 'Prints output' }],
-                rubric: [{ id: 'rb-1', title: 'Output matches', maxPoints: 10, description: 'Passes test cases' }]
-              }
-            }
-          ]
-        }
-      ]
+      modules: []
     };
 
     addCourse(newCourseObj);

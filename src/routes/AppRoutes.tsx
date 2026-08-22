@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { MainLayout } from '../components/layout/MainLayout';
@@ -74,12 +74,20 @@ const CourseDetailRoutePage: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
   const { courses, activeMode, setActiveLesson, openAuthModal } = useApp();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(!courses.some(c => c.id === courseId));
 
-  const course = courses.find(c => c.id === courseId) || courses[0];
+  const course = courses.find(c => c.id === courseId);
 
-  if (!course) {
-    return <Navigate to="/courses" replace />;
-  }
+  useEffect(() => {
+    if (course) {
+      setLoading(false);
+    } else {
+      const timer = setTimeout(() => {
+        setLoading(false);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [course, courses]);
 
   const handleOpenLesson = (lesson?: Lesson) => {
     if (activeMode === 'marketing') {
@@ -89,6 +97,30 @@ const CourseDetailRoutePage: React.FC = () => {
       navigate('/student/lesson');
     }
   };
+
+  if (!course) {
+    if (loading) {
+      return (
+        <div className="max-w-4xl mx-auto py-24 text-center space-y-4 animate-fadeIn">
+          <div className="w-10 h-10 border-4 border-stamp border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="font-mono text-sm font-extrabold text-graphite">Loading course curriculum...</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="max-w-4xl mx-auto py-16 text-center space-y-4 p-8 bg-paper-card border-2 border-ink rounded-2xl shadow-solid-md animate-fadeIn">
+        <h2 className="text-2xl font-extrabold text-ink">Course Not Found</h2>
+        <p className="text-sm text-graphite">The requested course "{courseId}" could not be loaded or was removed.</p>
+        <button
+          onClick={() => navigate(activeMode === 'student' ? '/student/dashboard' : '/courses')}
+          className="px-6 py-2.5 bg-highlighter hover:bg-highlighter-hover border-2 border-ink rounded-xl font-extrabold text-xs shadow-solid-sm btn-bounce"
+        >
+          ← Back to All Courses
+        </button>
+      </div>
+    );
+  }
 
   return (
     <CourseDetailView
@@ -110,11 +142,43 @@ const StudentClassroomDetailRoutePage: React.FC = () => {
   const { classroomId } = useParams<{ classroomId: string }>();
   const { classrooms, setActiveLesson } = useApp();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(!classrooms.some(c => c.id === classroomId));
 
-  const classroom = classrooms.find(c => c.id === classroomId) || classrooms[0];
+  const classroom = classrooms.find(c => c.id === classroomId);
+
+  useEffect(() => {
+    if (classroom) {
+      setLoading(false);
+    } else {
+      const timer = setTimeout(() => {
+        setLoading(false);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [classroom, classrooms]);
 
   if (!classroom) {
-    return <Navigate to="/student/classrooms" replace />;
+    if (loading) {
+      return (
+        <div className="max-w-4xl mx-auto py-24 text-center space-y-4 animate-fadeIn">
+          <div className="w-10 h-10 border-4 border-stamp border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="font-mono text-sm font-extrabold text-graphite">Loading classroom...</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="max-w-4xl mx-auto py-16 text-center space-y-4 p-8 bg-paper-card border-2 border-ink rounded-2xl shadow-solid-md animate-fadeIn">
+        <h2 className="text-2xl font-extrabold text-ink">Classroom Not Found</h2>
+        <p className="text-sm text-graphite">The requested classroom could not be found.</p>
+        <button
+          onClick={() => navigate('/student/classrooms')}
+          className="px-6 py-2.5 bg-highlighter hover:bg-highlighter-hover border-2 border-ink rounded-xl font-extrabold text-xs shadow-solid-sm btn-bounce"
+        >
+          ← Back to My Classrooms
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -199,16 +263,20 @@ export const AppRoutes: React.FC = () => {
         <Route path="/blogs/:blogId" element={<PublicBlogsPage onOpenAuth={(tab) => openAuthModal(tab || 'signup')} />} />
 
         {/* ========================================================= */}
-        {/* 2. STUDENT PORTAL ROUTES (Students, Teachers, Admins)     */}
+        {/* 2. STUDENT PORTAL ROUTES (Strictly Students)              */}
         {/* ========================================================= */}
         <Route
           path="/student"
-          element={<Navigate to="/student/dashboard" replace />}
+          element={
+            <ProtectedRoute allowedRoles={['student']}>
+              <Navigate to="/student/dashboard" replace />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="/student/dashboard"
           element={
-            <ProtectedRoute allowedRoles={['student', 'teacher', 'moderator', 'admin']}>
+            <ProtectedRoute allowedRoles={['student']}>
               <StudentDashboard 
                 onOpenLesson={() => navigate('/student/lesson')} 
                 onOpenJoinModal={openJoinModal} 
@@ -220,7 +288,7 @@ export const AppRoutes: React.FC = () => {
         <Route
           path="/student/classrooms"
           element={
-            <ProtectedRoute allowedRoles={['student', 'teacher', 'moderator', 'admin']}>
+            <ProtectedRoute allowedRoles={['student']}>
               <StudentClassroomsView 
                 onOpenLesson={() => navigate('/student/lesson')} 
                 onOpenJoinModal={openJoinModal} 
@@ -232,7 +300,7 @@ export const AppRoutes: React.FC = () => {
         <Route
           path="/student/classrooms/:classroomId"
           element={
-            <ProtectedRoute allowedRoles={['student', 'teacher', 'moderator', 'admin']}>
+            <ProtectedRoute allowedRoles={['student']}>
               <StudentClassroomDetailRoutePage />
             </ProtectedRoute>
           }
@@ -240,7 +308,7 @@ export const AppRoutes: React.FC = () => {
         <Route
           path="/student/roadmaps"
           element={
-            <ProtectedRoute allowedRoles={['student', 'teacher', 'moderator', 'admin']}>
+            <ProtectedRoute allowedRoles={['student']}>
               <StudentRoadmapsView onOpenLesson={() => navigate('/student/lesson')} />
             </ProtectedRoute>
           }

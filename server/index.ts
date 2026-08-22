@@ -35,6 +35,27 @@ app.use('/api/classrooms', classroomsRoutes);
 app.use('/api/submissions', submissionsRoutes);
 app.use('/api/blogs', blogsRoutes);
 app.use('/api/admin', adminRoutes);
+app.get('/', (req: Request, res: Response) => {
+  res.json({
+    status: 'ok',
+    message: 'PaperCode Backend API is active. Web app runs on http://localhost:3000',
+    documentation: '/api/health'
+  });
+});
+
+app.use('/api', (req: Request, res: Response) => {
+  res.status(404).json({
+    success: false,
+    message: `API endpoint '${req.originalUrl}' was not found.`
+  });
+});
+
+app.use((req: Request, res: Response) => {
+  res.status(404).json({
+    success: false,
+    message: `Resource '${req.originalUrl}' was not found.`
+  });
+});
 
 // Initialize Database & Start Server
 seedDatabase().then(() => {

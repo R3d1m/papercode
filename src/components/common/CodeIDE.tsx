@@ -70,7 +70,10 @@ print("Decrypted Back :", reversed_code[::-1])`,
     if (initialCode !== undefined) {
       setCode(initialCode);
     }
-  }, [initialCode]);
+    setExecutionResult(null);
+    setAiExplanation(null);
+    setAiMode(null);
+  }, [initialCode, expectedOutput, initialLanguage]);
 
   const hasError = Boolean(
     executionResult && (
@@ -219,19 +222,31 @@ print("Decrypted Back :", reversed_code[::-1])`,
           {showLanguageSelector && (
             <div className="flex items-center bg-black/50 border border-slate-700 rounded-full p-0.5 text-[11px] font-mono">
               <button
-                onClick={() => setLanguage('python')}
+                onClick={() => {
+                  setLanguage('python');
+                  setExecutionResult(null);
+                  setAiExplanation(null);
+                }}
                 className={`px-2.5 py-0.5 rounded-full font-bold transition-all ${language === 'python' ? 'bg-highlighter text-ink' : 'text-slate-300 hover:text-white'}`}
               >
                 Python
               </button>
               <button
-                onClick={() => setLanguage('javascript')}
+                onClick={() => {
+                  setLanguage('javascript');
+                  setExecutionResult(null);
+                  setAiExplanation(null);
+                }}
                 className={`px-2.5 py-0.5 rounded-full font-bold transition-all ${language === 'javascript' ? 'bg-highlighter text-ink' : 'text-slate-300 hover:text-white'}`}
               >
                 JS
               </button>
               <button
-                onClick={() => setLanguage('cpp')}
+                onClick={() => {
+                  setLanguage('cpp');
+                  setExecutionResult(null);
+                  setAiExplanation(null);
+                }}
                 className={`px-2.5 py-0.5 rounded-full font-bold transition-all ${language === 'cpp' ? 'bg-highlighter text-ink' : 'text-slate-300 hover:text-white'}`}
               >
                 C++

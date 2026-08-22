@@ -397,7 +397,8 @@ export const CourseBuilder: React.FC = () => {
       rubric: [{ id: 'rb-1', title: 'Syntax', maxPoints: 10, description: 'Valid' }]
     };
 
-    const targetModuleId = selectedModuleId || selectedCourse.modules?.[0]?.id;
+    const currentCourse = courses.find(c => c.id === selectedCourseId) || selectedCourse;
+    const targetModuleId = selectedModuleId || currentCourse?.modules?.[0]?.id;
 
     if (editingLessonId && targetModuleId) {
       const updatedLessonObj: Lesson = {
@@ -416,7 +417,7 @@ export const CourseBuilder: React.FC = () => {
         blocks: lessonBlocks
       };
 
-      updateLesson(selectedCourse.id, targetModuleId, editingLessonId, updatedLessonObj);
+      updateLesson(currentCourse.id, targetModuleId, editingLessonId, updatedLessonObj);
     } else {
       const newLessonObj: Lesson = {
         id: 'les-' + Date.now(),
@@ -435,22 +436,23 @@ export const CourseBuilder: React.FC = () => {
       };
 
       if (targetModuleId) {
-        updateLesson(selectedCourse.id, targetModuleId, newLessonObj.id, newLessonObj);
+        updateLesson(currentCourse.id, targetModuleId, newLessonObj.id, newLessonObj);
       } else {
         const defaultModId = 'mod-' + Date.now();
         const defaultMod: Module = {
           id: defaultModId,
           title: 'Module 1: General Lessons',
           description: 'Default module',
-          category: 'Core',
+          category: 'Core Concepts',
           isPublished: true,
           lessons: [newLessonObj]
         };
-        addModuleToCourse(selectedCourse.id, defaultMod);
-        updateLesson(selectedCourse.id, defaultModId, newLessonObj.id, newLessonObj);
+        addModuleToCourse(currentCourse.id, defaultMod);
+        apiClient.createLesson(currentCourse.id, defaultModId, newLessonObj).catch(() => {});
       }
     }
 
+    setSelectedCourseId(currentCourse.id);
     setPublishSuccess(true);
     confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
 
@@ -458,7 +460,7 @@ export const CourseBuilder: React.FC = () => {
       setPublishSuccess(false);
       setIsSubmittingLesson(false);
       setStep('course_detail');
-    }, 1200);
+    }, 800);
   };
 
   return (
@@ -824,6 +826,21 @@ export const CourseBuilder: React.FC = () => {
                         </div>
                       </div>
                     ))}
+                    {(mod.lessons || []).length === 0 && (
+                      <div className="col-span-full p-4 text-center bg-paper-muted border border-dashed border-ink/20 rounded-xl space-y-2">
+                        <p className="text-xs text-graphite font-bold">No published lessons in this module yet.</p>
+                        {isMyCourse && (
+                          <button
+                            type="button"
+                            onClick={() => handleStartNewLesson(mod.id)}
+                            className="px-3 py-1.5 bg-highlighter hover:bg-highlighter-hover border border-ink rounded-lg text-xs font-extrabold text-ink inline-flex items-center gap-1 shadow-solid-xs btn-bounce"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Add First Lesson</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </BentoCard>

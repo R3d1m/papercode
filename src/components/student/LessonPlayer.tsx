@@ -742,6 +742,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ onBack }) => {
                 {/* Direct Wide Code IDE (Edit freely, run code, view output) */}
                 <div className="space-y-2 w-full">
                   <CodeIDE
+                    key={currentBlock?.id || ('block-' + currentBlockIndex)}
                     initialCode={ideCode}
                     onCodeChange={(newCode) => {
                       setIdeCode(newCode);

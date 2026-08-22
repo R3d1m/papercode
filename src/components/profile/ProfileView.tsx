@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiClient } from '../../services/apiClient';
 import { useApp } from '../../context/AppContext';
 import { BentoCard } from '../common/BentoCard';
 import { PillButton } from '../common/PillButton';
@@ -45,6 +46,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onBack }) => {
   const [school, setSchool] = useState(currentUser.school || '');
   const [division, setDivision] = useState(currentUser.division || 'Chittagong');
   const [avatar, setAvatar] = useState(currentUser.avatar);
+
+  useEffect(() => {
+    if (currentUser) {
+      setName(currentUser.name || '');
+      setEmail(currentUser.email || '');
+      setSchool(currentUser.school || '');
+      setDivision(currentUser.division || 'Chittagong');
+      setAvatar(currentUser.avatar || '');
+    }
+  }, [currentUser.id, currentUser.name, currentUser.school, currentUser.division, currentUser.avatar]);
   
   // Password state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -55,8 +66,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onBack }) => {
 
   // Save feedback state
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     updateUserProfile({
       name,
@@ -69,7 +81,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onBack }) => {
     setTimeout(() => setSaveSuccess(false), 3000);
   };
 
-  const handleUpdatePassword = (e: React.FormEvent) => {
+  const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError('');
     setPasswordSuccess(false);
@@ -87,12 +99,28 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onBack }) => {
       return;
     }
 
-    // Mock successful password change
-    setPasswordSuccess(true);
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-    setTimeout(() => setPasswordSuccess(false), 4000);
+    setIsUpdatingPassword(true);
+    try {
+      const res = await apiClient.changePassword({
+        userId: currentUser.id,
+        currentPassword,
+        newPassword
+      });
+
+      if (res.success) {
+        setPasswordSuccess(true);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setTimeout(() => setPasswordSuccess(false), 4000);
+      } else {
+        setPasswordError(res.message || 'Failed to update password. Please check your current password.');
+      }
+    } catch (err: any) {
+      setPasswordError(err.message || 'Error communicating with server.');
+    } finally {
+      setIsUpdatingPassword(false);
+    }
   };
 
   const divisionsList = [

@@ -324,4 +324,146 @@ router.post('/google', async (req: Request, res: Response) => {
   }
 });
 
+// PUT: Update User Profile (Name, School, Division, Avatar)
+router.put('/profile', async (req: Request, res: Response) => {
+  try {
+    const { userId, email, role, name, school, division, avatar } = req.body;
+    if (!userId && !email) {
+      return res.status(400).json({ success: false, message: 'User ID or email is required.' });
+    }
+
+    // 1. Try updating by ID
+    let result = await pool.query(`
+      UPDATE users 
+      SET 
+        name = COALESCE($1, name),
+        school = COALESCE($2, school),
+        division = COALESCE($3, division),
+        avatar_url = COALESCE($4, avatar_url),
+        role = COALESCE($5, role),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $6
+      RETURNING *;
+    `, [
+      name ? name.trim() : null,
+      school ? school.trim() : null,
+      division ? division.trim() : null,
+      avatar || null,
+      role || null,
+      userId
+    ]);
+
+    // 2. If not found by ID, try updating by email
+    if (result.rows.length === 0 && email) {
+      result = await pool.query(`
+        UPDATE users 
+        SET 
+          name = COALESCE($1, name),
+          school = COALESCE($2, school),
+          division = COALESCE($3, division),
+          avatar_url = COALESCE($4, avatar_url),
+          role = COALESCE($5, role),
+          updated_at = CURRENT_TIMESTAMP
+        WHERE LOWER(email) = LOWER($6)
+        RETURNING *;
+      `, [
+        name ? name.trim() : null,
+        school ? school.trim() : null,
+        division ? division.trim() : null,
+        avatar || null,
+        role || null,
+        email.trim()
+      ]);
+    }
+
+    // 3. If user record is completely missing from DB, insert it now
+    if (result.rows.length === 0) {
+      const effectiveId = userId || ('usr-' + Date.now());
+      const effectiveEmail = email ? email.trim().toLowerCase() : `${effectiveId}@papercode.edu.bd`;
+      const userRole = role || (userId?.includes('adm') ? 'admin' : (userId?.includes('tch') ? 'teacher' : 'student'));
+      result = await pool.query(`
+        INSERT INTO users (id, name, email, role, school, division, avatar_url, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+        ON CONFLICT (id) DO UPDATE SET
+          name = EXCLUDED.name,
+          role = CASE WHEN users.role = 'admin' THEN 'admin' ELSE EXCLUDED.role END,
+          school = EXCLUDED.school,
+          division = EXCLUDED.division,
+          avatar_url = EXCLUDED.avatar_url,
+          updated_at = CURRENT_TIMESTAMP
+        RETURNING *;
+      `, [
+        effectiveId,
+        name ? name.trim() : 'PaperCode User',
+        effectiveEmail,
+        userRole,
+        school ? school.trim() : 'Independent Learner',
+        division ? division.trim() : 'Chittagong',
+        avatar || null
+      ]);
+    }
+
+    const u = result.rows[0];
+    const updatedUser = {
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      school: u.school,
+      division: u.division,
+      avatar: u.avatar_url,
+      xp: u.xp_points || 0,
+      streak: u.streak_days || 0
+    };
+
+    return res.json({
+      success: true,
+      message: 'Profile updated successfully!',
+      user: updatedUser
+    });
+  } catch (err: any) {
+    console.error('Profile update error:', err.message);
+    return res.status(500).json({ success: false, message: 'Failed to update profile: ' + err.message });
+  }
+});
+
+// POST: Change Password
+router.post('/change-password', async (req: Request, res: Response) => {
+  try {
+    const { userId, email, currentPassword, newPassword } = req.body;
+    if ((!userId && !email) || !currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: 'User identifier, current password, and new password are required.' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'New password must be at least 6 characters.' });
+    }
+
+    let userRes = await pool.query('SELECT id, password_hash FROM users WHERE id = $1', [userId]);
+    if (userRes.rows.length === 0 && email) {
+      userRes = await pool.query('SELECT id, password_hash FROM users WHERE LOWER(email) = LOWER($1)', [email.trim()]);
+    }
+
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found in system.' });
+    }
+
+    const targetUserId = userRes.rows[0].id;
+    const currentHash = userRes.rows[0].password_hash;
+    if (currentHash && currentHash !== currentPassword && currentHash !== 'default_pass_123') {
+      return res.status(401).json({ success: false, message: 'Incorrect current password. Please try again.' });
+    }
+
+    await pool.query('UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [newPassword, targetUserId]);
+
+    return res.json({
+      success: true,
+      message: 'Password updated successfully!'
+    });
+  } catch (err: any) {
+    console.error('Change password error:', err.message);
+    return res.status(500).json({ success: false, message: 'Failed to change password: ' + err.message });
+  }
+});
+
 export default router;
