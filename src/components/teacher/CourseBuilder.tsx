@@ -1415,16 +1415,23 @@ export const CourseBuilder: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="font-extrabold text-ink block mb-1">Expected Output (Judge0 Test):</label>
-                      <input
-                        type="text"
+                      <label className="font-extrabold text-ink block mb-1 flex items-center justify-between">
+                        <span>Expected Output (Judge0 Test):</span>
+                        <span className="text-[10px] font-mono text-graphite font-semibold">Supports Multiple Lines</span>
+                      </label>
+                      <textarea
+                        rows={3}
                         value={(block as ExerciseBlock).testCases[0]?.expectedOutput || ''}
                         onChange={(e) => {
                           const updated = [...lessonBlocks];
+                          if (!(updated[idx] as ExerciseBlock).testCases) {
+                            (updated[idx] as ExerciseBlock).testCases = [{ id: 'tc-1', input: '', expectedOutput: '' }];
+                          }
                           (updated[idx] as ExerciseBlock).testCases[0].expectedOutput = e.target.value;
                           setLessonBlocks(updated);
                         }}
-                        className="w-full p-2.5 bg-paper-light border border-ink/30 rounded-xl font-mono text-xs font-bold"
+                        placeholder="Enter expected standard output (multiple lines supported)..."
+                        className="w-full p-2.5 bg-paper-light border border-ink/30 rounded-xl font-mono text-xs font-bold leading-relaxed whitespace-pre resize-y focus:outline-none focus:border-ink"
                       />
                     </div>
                   </div>

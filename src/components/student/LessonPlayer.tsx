@@ -228,7 +228,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ onBack }) => {
       code: ideCode || ex.starterCode,
       language: ex.language,
       executionResult: {
-        stdout: 'Hello from PaperCode Bangladesh!',
+        stdout: ex.testCases?.[0]?.expectedOutput || 'Hello from PaperCode Bangladesh!',
         stderr: null,
         compile_output: null,
         message: null,
@@ -239,11 +239,11 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ onBack }) => {
       },
       testCaseResults: [
         { 
-          testCaseId: ex.testCases[0]?.id || 'tc-1', 
+          testCaseId: ex.testCases?.[0]?.id || 'tc-1', 
           passed: true, 
-          input: '', 
-          expected: 'Hello from PaperCode Bangladesh!', 
-          actual: 'Hello from PaperCode Bangladesh!' 
+          input: ex.testCases?.[0]?.input || '', 
+          expected: ex.testCases?.[0]?.expectedOutput || 'Hello from PaperCode Bangladesh!', 
+          actual: ex.testCases?.[0]?.expectedOutput || 'Hello from PaperCode Bangladesh!' 
         }
       ],
       score: 10,

@@ -184,7 +184,7 @@ export const TeacherDashboard: React.FC = () => {
                     <span className="text-[10px] text-graphite font-mono">Assignments</span>
                   </div>
                   <div className="p-2.5 bg-paper-light border border-ink/20 rounded-xl">
-                    <strong className="block text-base font-extrabold text-green-700">{cls.courseIds?.length || 1}</strong>
+                    <strong className="block text-base font-extrabold text-green-700">{cls.courseIds?.length ?? 0}</strong>
                     <span className="text-[10px] text-graphite font-mono">Courses Attached</span>
                   </div>
                 </div>

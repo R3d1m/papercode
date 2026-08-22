@@ -80,6 +80,86 @@ router.post('/run', async (req: Request, res: Response) => {
   }
 });
 
+router.post('/ai-explain', async (req: Request, res: Response) => {
+  try {
+    const { code, language = 'python', error, mode = 'explain' } = req.body;
+    if (!code) {
+      return res.status(400).json({ success: false, message: 'code is required.' });
+    }
+
+    if (config.gemini.apiKey && config.gemini.apiKey !== 'your_gemini_api_key_here') {
+      const modelsToTry = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-3.5-flash'];
+
+      let systemInstruction = '';
+      if (mode === 'debug' || error) {
+        systemInstruction = 
+          'You are a friendly, encouraging AI programming tutor for young school and college students in Bangladesh.\n' +
+          'Language: ' + language + '\n' +
+          'Student Code:\n' + code + '\n' +
+          'Terminal Error Output:\n' + (error || 'Unknown runtime error') + '\n\n' +
+          'Task: In 1-2 short, crystal-clear, and simple sentences in BANGLA (বাংলা), specifically explain what went wrong in the output and how the student should fix it.\n' +
+          'Guidelines:\n' +
+          '1. Explain in simple, warm Bengali so a young beginner immediately understands.\n' +
+          '2. Specifically mention what line or symbol caused the error (যেমন: ৪ নম্বর লাইনে বাড়তি "}" চিহ্নটি মুছে ফেলো)।\n' +
+          '3. Do NOT use English code fence blocks or bullet points. Output ONLY the 1-2 lines in Bangla.';
+      } else {
+        systemInstruction = 
+          'You are a friendly, encouraging AI programming tutor for young school and college students in Bangladesh.\n' +
+          'Language: ' + language + '\n' +
+          'Student Code:\n' + code + '\n\n' +
+          'Task: In 1-2 short, crystal-clear, and simple sentences in BANGLA (বাংলা), explain what this program does.\n' +
+          'Guidelines:\n' +
+          '1. Explain in simple, warm Bengali for young school students.\n' +
+          '2. Output ONLY the 1-2 lines in Bangla without any markdown code fences or bullet points.';
+      }
+
+      for (const modelName of modelsToTry) {
+        try {
+          const endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent?key=' + config.gemini.apiKey;
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: systemInstruction }] }]
+            })
+          });
+
+          const data = await response.json();
+          const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          const explanation = rawText.replace(/^```[a-zA-Z0-9_-]*\n?/gm, '').replace(/```$/gm, '').trim();
+
+          if (explanation) {
+            return res.json({
+              success: true,
+              explanation,
+              mode
+            });
+          }
+        } catch (geminiError: any) {
+          console.warn(`Gemini ${modelName} error:`, geminiError.message);
+        }
+      }
+    }
+
+    // Fallback response in Bangla if offline
+    if (mode === 'debug' || error) {
+      return res.json({
+        success: true,
+        explanation: 'তোমার কোডের টার্মিনাল আউটপুটে নির্দেশিত লাইনের বানান বা সিনট্যাক্সটি ঠিক করে পুনরায় রান করো।',
+        mode
+      });
+    }
+
+    return res.json({
+      success: true,
+      explanation: 'এই প্রোগ্রামটি ভেরিয়েবল ও লজিক ব্যবহার করে ফলাফল স্ক্রিনে প্রদর্শন করছে।',
+      mode
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 router.get('/languages', (req: Request, res: Response) => {
   return res.json({
     success: true,

@@ -77,7 +77,7 @@ router.get('/', async (req: Request, res: Response) => {
       archived: false,
       roster: rosterByClass[r.id] || [],
       assignments: assignmentsByClass[r.id] || [],
-      courseIds: Array.isArray(r.course_ids) ? r.course_ids : (r.course_ids ? [r.course_ids] : ['crs-py-101'])
+      courseIds: Array.isArray(r.course_ids) ? r.course_ids : (r.course_ids ? [r.course_ids] : [])
     }));
 
     return res.json({ success: true, classrooms });
@@ -90,7 +90,7 @@ router.get('/', async (req: Request, res: Response) => {
 // POST: Create a new Classroom in PostgreSQL
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { name, subject, grade, teacherId = 'usr-tch-001', courseIds = ['crs-py-101'], joinCode: requestedJoinCode } = req.body;
+    const { name, subject, grade, teacherId = 'usr-tch-001', courseIds = [], joinCode: requestedJoinCode } = req.body;
     const id = 'cls-' + Date.now();
     const joinCode = (requestedJoinCode || ('PC-' + Math.floor(1000 + Math.random() * 9000))).trim().toUpperCase();
 
@@ -124,7 +124,7 @@ router.post('/', async (req: Request, res: Response) => {
       archived: false,
       roster: [],
       assignments: [],
-      courseIds: Array.isArray(r.course_ids) ? r.course_ids : courseIds
+      courseIds: Array.isArray(r.course_ids) ? r.course_ids : (courseIds || [])
     };
     return res.status(201).json({ success: true, classroom });
   } catch (err: any) {
@@ -163,9 +163,23 @@ router.post('/join', async (req: Request, res: Response) => {
     const targetStudentId = studentId || 'usr-student-1';
     const enrollId = 'enr-' + Date.now();
 
+    // Ensure student exists in users table to satisfy foreign key
+    try {
+      const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [targetStudentId]);
+      if (userCheck.rows.length === 0) {
+        await pool.query(`
+          INSERT INTO users (id, name, email, role, school, division, created_at)
+          VALUES ($1, $2, $3, 'student', 'Independent Learner', 'Chittagong', NOW())
+          ON CONFLICT (id) DO NOTHING;
+        `, [targetStudentId, 'Student ' + targetStudentId.slice(-4), targetStudentId + '@papercode.edu']);
+      }
+    } catch (uErr: any) {
+      console.warn('User upsert note:', uErr.message);
+    }
+
     try {
       await pool.query(
-        'INSERT INTO classroom_enrollments (id, classroom_id, student_id, enrolled_at) VALUES ($1, $2, $3, NOW()) ON CONFLICT DO NOTHING',
+        'INSERT INTO classroom_enrollments (id, classroom_id, student_id, enrolled_at) VALUES ($1, $2, $3, NOW()) ON CONFLICT (classroom_id, student_id) DO NOTHING',
         [enrollId, cls.id, targetStudentId]
       );
     } catch (e: any) {

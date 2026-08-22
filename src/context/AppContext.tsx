@@ -439,16 +439,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (backendRes.classroom) {
       const clsId = backendRes.classroom.id;
-      if (!(currentUser?.enrolledClassroomIds || []).includes(clsId)) {
+      const currentEnrolled = currentUser?.enrolledClassroomIds || [];
+      if (!currentEnrolled.includes(clsId)) {
+        const updatedEnrolled = [...currentEnrolled, clsId];
         const updatedUser: User = {
           ...currentUser,
-          enrolledClassroomIds: [...(currentUser?.enrolledClassroomIds || []), clsId]
+          enrolledClassroomIds: updatedEnrolled
         };
         setCurrentUser(updatedUser);
         try {
           localStorage.setItem('papercode_user_session', JSON.stringify(updatedUser));
         } catch {}
       }
+
+      // Also ensure local classroom state includes current student in roster
+      setClassrooms(prev => prev.map(c => {
+        if (c.id === clsId) {
+          const alreadyInRoster = (c.roster || []).some(r => r.studentId === currentUser?.id);
+          if (!alreadyInRoster && currentUser) {
+            return {
+              ...c,
+              roster: [
+                ...(c.roster || []),
+                {
+                  studentId: currentUser.id,
+                  name: currentUser.name,
+                  email: currentUser.email,
+                  avatar: currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+                  school: currentUser.school || 'Student',
+                  division: currentUser.division || 'Chittagong',
+                  completedAssignmentsCount: 0,
+                  averageScore: 100,
+                  lastActive: 'Just joined'
+                }
+              ]
+            };
+          }
+        }
+        return c;
+      }));
     }
 
     return { 
@@ -458,9 +487,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
-  const createClassroom = (name: string, gradeLevel: string, subject: string, courseIds: string[] = ['crs-py-101']) => {
+  const createClassroom = (name: string, gradeLevel: string, subject: string, courseIds: string[] = []) => {
     const randomCode = 'PC-' + Math.floor(1000 + Math.random() * 9000);
-    const effectiveCourseIds = courseIds.length > 0 ? courseIds : ['crs-py-101'];
+    const effectiveCourseIds = Array.isArray(courseIds) ? courseIds : [];
     const newClassroom: Classroom = {
       id: 'cls-' + Date.now(),
       name,

@@ -50,6 +50,26 @@ export const apiClient = {
     };
   },
 
+  async explainCode(code: string, language: string = 'python', error?: string | null, mode: 'explain' | 'debug' = 'explain') {
+    try {
+      const res = await fetch(API_BASE + '/sandbox/ai-explain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, language, error, mode })
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {
+      console.warn('AI Explain fallback active');
+    }
+    return {
+      success: true,
+      explanation: mode === 'debug'
+        ? 'Check the syntax and variable definitions on the highlighted error line in your script.'
+        : 'This code initializes variables and performs standard operations on the provided data.',
+      mode
+    };
+  },
+
   async signup(data: any) {
     try {
       const res = await fetch(API_BASE + '/auth/signup', {

@@ -19,7 +19,8 @@ export const StudentClassroomsView: React.FC<StudentClassroomsViewProps> = ({
   const { classrooms, currentUser } = useApp();
 
   const enrolledClassrooms = classrooms.filter(c => 
-    (currentUser.enrolledClassroomIds || []).includes(c.id)
+    (currentUser?.enrolledClassroomIds || []).includes(c.id) ||
+    (c.roster || []).some(r => r.studentId === currentUser?.id || (currentUser?.email && r.email === currentUser?.email))
   );
 
   return (
