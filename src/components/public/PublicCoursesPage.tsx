@@ -45,15 +45,17 @@ export const PublicCoursesPage: React.FC<PublicCoursesPageProps> = ({ onOpenAuth
         </p>
 
         {/* Search */}
-        <div className="max-w-md mx-auto relative pt-2">
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search courses (e.g. Python, C, Algorithms)..."
-            className="w-full pl-10 pr-4 py-3 rounded-2xl border-2 border-ink bg-paper-card text-sm font-bold shadow-solid-xs focus:outline-none focus:ring-2 focus:ring-highlighter"
-          />
-          <Search className="w-4 h-4 text-graphite absolute left-3.5 top-5.5" />
+        <div className="max-w-md mx-auto pt-2">
+          <div className="relative flex items-center">
+            <Search className="w-4 h-4 text-graphite absolute left-3.5 pointer-events-none" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search courses (e.g. Python, C, Algorithms)..."
+              className="w-full pl-10 pr-4 py-3 rounded-2xl border-2 border-ink bg-paper-card text-sm font-bold shadow-solid-xs focus:outline-none focus:ring-2 focus:ring-highlighter"
+            />
+          </div>
         </div>
       </div>
 
@@ -82,14 +84,18 @@ export const PublicCoursesPage: React.FC<PublicCoursesPageProps> = ({ onOpenAuth
                 <h2 className="text-2xl font-extrabold text-ink leading-snug">
                   {course.title}
                 </h2>
-                <p className="text-xs text-stamp font-bold">
-                  {course.subtitle}
-                </p>
+                {course.subtitle && course.subtitle.trim() !== course.description?.trim() && (
+                  <p className="text-xs text-stamp font-bold">
+                    {course.subtitle}
+                  </p>
+                )}
               </div>
 
-              <p className="text-xs text-graphite leading-relaxed">
-                {course.description}
-              </p>
+              {course.description && (
+                <p className="text-xs text-graphite leading-relaxed">
+                  {course.description}
+                </p>
+              )}
 
               {/* Course Stats */}
               <div className="grid grid-cols-2 gap-2 text-xs font-mono font-bold text-ink">

@@ -108,8 +108,8 @@ router.get('/', async (req: Request, res: Response) => {
     const courses = coursesRes.rows.map(c => ({
       id: c.id,
       title: c.title,
-      subtitle: c.description || '',
-      description: c.description,
+      subtitle: c.subtitle || '',
+      description: c.description || '',
       category: c.language ? (c.language.toUpperCase() + ' Programming') : 'ICT Curriculum',
       language: c.language || 'python',
       level: c.level || 'Beginner',

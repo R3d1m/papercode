@@ -284,7 +284,8 @@ export const PublicBlogsPage: React.FC<PublicBlogsPageProps> = ({ onOpenAuth }) 
         </div>
 
         {/* Search Bar */}
-        <div className="relative w-full sm:w-72">
+        <div className="relative w-full sm:w-72 flex items-center">
+          <Search className="w-3.5 h-3.5 text-graphite absolute left-3 pointer-events-none" />
           <input
             type="text"
             value={searchTerm}
@@ -292,7 +293,6 @@ export const PublicBlogsPage: React.FC<PublicBlogsPageProps> = ({ onOpenAuth }) 
             placeholder="Search articles or authors..."
             className="w-full pl-9 pr-4 py-2 rounded-xl border-2 border-ink bg-paper-card text-xs font-bold shadow-solid-xs focus:outline-none focus:ring-2 focus:ring-highlighter"
           />
-          <Search className="w-3.5 h-3.5 text-graphite absolute left-3 top-3" />
         </div>
 
       </div>

@@ -47,15 +47,17 @@ export const PublicRoadmapsPage: React.FC<PublicRoadmapsPageProps> = ({ onOpenAu
         </p>
 
         {/* Search Input */}
-        <div className="max-w-md mx-auto relative pt-2">
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search roadmaps by keyword (e.g. ICT, C++, SSC)..."
-            className="w-full pl-10 pr-4 py-3 rounded-2xl border-2 border-ink bg-paper-card text-sm font-bold shadow-solid-xs focus:outline-none focus:ring-2 focus:ring-highlighter"
-          />
-          <Search className="w-4 h-4 text-graphite absolute left-3.5 top-5.5" />
+        <div className="max-w-md mx-auto pt-2">
+          <div className="relative flex items-center">
+            <Search className="w-4 h-4 text-graphite absolute left-3.5 pointer-events-none" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search roadmaps by keyword (e.g. ICT, C++, SSC)..."
+              className="w-full pl-10 pr-4 py-3 rounded-2xl border-2 border-ink bg-paper-card text-sm font-bold shadow-solid-xs focus:outline-none focus:ring-2 focus:ring-highlighter"
+            />
+          </div>
         </div>
       </div>
 
