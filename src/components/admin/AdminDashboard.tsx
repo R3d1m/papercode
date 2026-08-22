@@ -266,9 +266,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ initialTab = 'vi
               <h1 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight">
                 Admin Dashboard & Control Center
               </h1>
-              <p className="text-xs text-graphite font-bold">
+              {/* <p className="text-xs text-graphite font-bold">
                 Platform vitals, course management, roadmap tracks, blogs, and moderator controls
-              </p>
+              </p> */}
             </div>
           </div>
 
@@ -282,6 +282,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ initialTab = 'vi
         </div>
 
         {/* Tab Switcher */}
+        {/*
         <div className="flex flex-wrap items-center gap-2 p-1.5 bg-paper-muted border-2 border-ink/20 rounded-2xl w-fit text-xs font-extrabold">
           <button
             type="button"
@@ -319,7 +320,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ initialTab = 'vi
             👩‍🏫 Moderator Promotion ({moderators.length})
           </button>
         </div>
+        */}
       </div>
+      
 
       {/* 1. TAB: VITALS & DATABASE METRICS */}
       {activeTab === 'vitals' && (
@@ -329,9 +332,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ initialTab = 'vi
               <Activity className="w-5 h-5 text-stamp" />
               <span>Platform Live Telemetry</span>
             </h2>
-            <p className="text-xs text-graphite font-bold">
+            {/* <p className="text-xs text-graphite font-bold">
               Real-time counts queried directly from PostgreSQL database and vision runner.
-            </p>
+            </p> */}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
