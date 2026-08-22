@@ -49,7 +49,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onClose,
   initialTab = 'login'
 }) => {
-  const { login, signup } = useApp();
+  const { login, signup, loginWithGoogle } = useApp();
   
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>(
     initialTab === 'signup' ? 'signup' : 'signin'
@@ -66,6 +66,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [division, setDivision] = useState('Chittagong');
 
   const [statusMessage, setStatusMessage] = useState<{ success?: boolean; message?: string } | null>(null);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   if (!isOpen) return null;
 
@@ -109,36 +110,105 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  const handleGoogleAuth = async () => {
-    const mockEmail = selectedRole === 'teacher' ? 'teacher.demo@gmail.com' : 'student.learner@gmail.com';
-    const mockName = selectedRole === 'teacher' ? 'Google Teacher User' : 'Google Student User';
-    
-    if (authMode === 'signin') {
-      const res = await login(mockEmail, 'default_pass_123', selectedRole);
-      setStatusMessage(res);
-      if (res.success) {
-        confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
-        setTimeout(() => {
-          onClose();
-          setStatusMessage(null);
-        }, 1000);
+  const handleGoogleAuth = () => {
+    setIsGoogleLoading(true);
+    setStatusMessage({ success: true, message: 'Opening Google Sign-In...' });
+
+    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '1090092041407-8h3tp91d5r49qnvrl6tk9ql2v72igpuh.apps.googleusercontent.com';
+
+    const launchGoogleClient = () => {
+      const g = (window as any).google;
+      if (!g?.accounts?.oauth2) {
+        setStatusMessage({
+          success: false,
+          message: 'Google Sign-In SDK is loading. Please check your internet connection and retry.'
+        });
+        setIsGoogleLoading(false);
+        return;
       }
+
+      try {
+        const client = g.accounts.oauth2.initTokenClient({
+          client_id: googleClientId,
+          scope: 'email profile openid',
+          callback: async (tokenResponse: any) => {
+            if (tokenResponse.error) {
+              console.error('Google OAuth error:', tokenResponse);
+              setStatusMessage({
+                success: false,
+                message: `Google Sign-In cancelled or error: ${tokenResponse.error_description || tokenResponse.error}`
+              });
+              setIsGoogleLoading(false);
+              return;
+            }
+
+            if (tokenResponse.access_token) {
+              setStatusMessage({ success: true, message: 'Authenticating with Google account...' });
+
+              let profile = null;
+              try {
+                const profileRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                  headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+                });
+                if (profileRes.ok) {
+                  profile = await profileRes.json();
+                }
+              } catch (profileErr) {
+                console.warn('Could not fetch userinfo directly in client:', profileErr);
+              }
+
+              const res = await loginWithGoogle({
+                accessToken: tokenResponse.access_token,
+                profile,
+                role: selectedRole,
+                school: school || (selectedRole === 'teacher' ? 'Independent Educator / School' : 'Independent Learner'),
+                division
+              });
+
+              setStatusMessage(res);
+              setIsGoogleLoading(false);
+
+              if (res.success) {
+                confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+                setTimeout(() => {
+                  onClose();
+                  setStatusMessage(null);
+                }, 900);
+              }
+            }
+          },
+          error_callback: (err: any) => {
+            console.warn('Google popup error:', err);
+            setStatusMessage({ success: false, message: 'Google Sign-In was cancelled or popup blocked.' });
+            setIsGoogleLoading(false);
+          }
+        });
+
+        client.requestAccessToken();
+      } catch (err: any) {
+        console.error('Google token client initialization error:', err);
+        setStatusMessage({ success: false, message: 'Error initializing Google Sign-In: ' + err.message });
+        setIsGoogleLoading(false);
+      }
+    };
+
+    if ((window as any).google?.accounts?.oauth2) {
+      launchGoogleClient();
     } else {
-      const res = await signup({
-        name: mockName,
-        email: mockEmail,
-        password: 'default_pass_123',
-        role: selectedRole,
-        school: 'Google Auth Learner',
-        division: 'Dhaka'
-      });
-      setStatusMessage(res);
-      if (res.success) {
-        confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
-        setTimeout(() => {
-          onClose();
-          setStatusMessage(null);
-        }, 1000);
+      const existingScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+      if (!existingScript) {
+        const script = document.createElement('script');
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true;
+        script.defer = true;
+        script.onload = () => launchGoogleClient();
+        script.onerror = () => {
+          setStatusMessage({ success: false, message: 'Failed to load Google SDK. Check ad-blocker or connection.' });
+          setIsGoogleLoading(false);
+        };
+        document.head.appendChild(script);
+      } else {
+        setTimeout(launchGoogleClient, 400);
       }
     }
   };
@@ -231,10 +301,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <button
             type="button"
             onClick={handleGoogleAuth}
-            className="w-full py-2.5 px-4 bg-white hover:bg-paper-light border-2 border-ink rounded-xl font-extrabold text-xs text-ink flex items-center justify-center gap-2.5 shadow-solid-xs btn-bounce transition-all"
+            disabled={isGoogleLoading}
+            className="w-full py-2.5 px-4 bg-white hover:bg-paper-light disabled:opacity-60 border-2 border-ink rounded-xl font-extrabold text-xs text-ink flex items-center justify-center gap-2.5 shadow-solid-xs btn-bounce transition-all cursor-pointer"
           >
             <GoogleIcon />
-            <span>Continue with Google</span>
+            <span>{isGoogleLoading ? 'Connecting to Google...' : 'Continue with Google'}</span>
           </button>
 
           <div className="flex items-center space-x-3 text-[11px] font-mono text-graphite font-bold">

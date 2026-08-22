@@ -21,6 +21,7 @@ interface AppContextType {
   currentUser: User;
   switchRole: (role: Role) => void;
   login: (email: string, password?: string, role?: Role) => Promise<{ success: boolean; message: string; user?: User }>;
+  loginWithGoogle: (data: { credential?: string; accessToken?: string; role?: Role; school?: string; division?: string; profile?: any }) => Promise<{ success: boolean; message: string; user?: User }>;
   signup: (userData: { name: string; email: string; password?: string; role: Role; school?: string; division?: string }) => Promise<{ success: boolean; message: string; user?: User }>;
   logout: () => void;
   users: User[];
@@ -225,6 +226,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       success: true, 
       message: res.message || ('Welcome back, ' + authUser.name + '!'), 
       user: authUser 
+    };
+  };
+
+  const loginWithGoogle = async (data: { credential?: string; accessToken?: string; role?: Role; school?: string; division?: string; profile?: any }) => {
+    const res = await apiClient.googleAuth(data);
+    if (!res || !res.success || !res.user) {
+      return {
+        success: false,
+        message: res?.message || 'Google authentication failed. Please try again.'
+      };
+    }
+
+    const userRole: Role = (res.user.role === 'teacher' || res.user.role === 'moderator' || res.user.role === 'admin') ? res.user.role : 'student';
+
+    const authUser: User = {
+      id: res.user.id,
+      name: res.user.name,
+      email: res.user.email,
+      role: userRole,
+      school: res.user.school || (userRole === 'teacher' ? 'Independent Educator' : 'Independent Learner'),
+      division: res.user.division || 'Chittagong',
+      avatar: res.user.avatar || res.user.avatar_url || (userRole === 'teacher'
+        ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150'
+        : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'),
+      xp: res.user.xp || 0,
+      streak: res.user.streak || 0,
+      completedLessons: res.user.completedLessons || [],
+      enrolledClassroomIds: res.user.enrolledClassroomIds || [],
+      enrolledRoadmapIds: res.user.enrolledRoadmapIds || [],
+      permissions: res.user.permissions,
+      joinedAt: new Date().toISOString().slice(0, 10)
+    };
+
+    setUsers(prev => {
+      const exists = prev.some(u => u.id === authUser.id || u.email.toLowerCase() === authUser.email.toLowerCase());
+      if (exists) {
+        return prev.map(u => (u.id === authUser.id || u.email.toLowerCase() === authUser.email.toLowerCase()) ? authUser : u);
+      }
+      return [authUser, ...prev];
+    });
+
+    setCurrentUser(authUser);
+    setCurrentRole(userRole);
+    setActiveMode(userRole);
+    setStudentXp(authUser.xp);
+    setStudentStreak(authUser.streak);
+
+    try {
+      localStorage.setItem('papercode_user_session', JSON.stringify(authUser));
+    } catch (e) {}
+
+    return {
+      success: true,
+      message: res.message || ('Welcome, ' + authUser.name + '!'),
+      user: authUser
     };
   };
 
@@ -700,6 +756,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       currentUser,
       switchRole,
       login,
+      loginWithGoogle,
       signup,
       logout,
       users,

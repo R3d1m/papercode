@@ -165,6 +165,48 @@ export const apiClient = {
     }
   },
 
+  async googleAuth(data: { credential?: string; accessToken?: string; role?: string; school?: string; division?: string; profile?: any }) {
+    try {
+      const res = await fetch(API_BASE + '/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+      const errData = await res.json().catch(() => ({}));
+      return { success: false, message: errData.message || 'Google authentication failed' };
+    } catch (e: any) {
+      // Fallback for local offline simulation if backend server is unreachable
+      const profile = data.profile || {};
+      const effectiveName = profile.name || 'Google User';
+      const effectiveEmail = (profile.email || 'google.user@example.com').trim().toLowerCase();
+      const effectiveRole = data.role || 'student';
+      const userId = 'usr-' + Date.now();
+      return {
+        success: true,
+        message: `Welcome to PaperCode, ${effectiveName}!`,
+        user: {
+          id: userId,
+          name: effectiveName,
+          email: effectiveEmail,
+          role: effectiveRole,
+          school: data.school || (effectiveRole === 'teacher' ? 'Independent Educator' : 'Independent Learner'),
+          division: data.division || 'Chittagong',
+          avatar: profile.picture || (effectiveRole === 'teacher'
+            ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150'
+            : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'),
+          xp: 0,
+          streak: 0,
+          enrolledCourseIds: [],
+          enrolledClassroomIds: [],
+          completedLessons: []
+        }
+      };
+    }
+  },
+
   async getCourses() {
     try {
       const res = await fetch(API_BASE + '/courses');

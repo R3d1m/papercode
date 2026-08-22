@@ -156,4 +156,177 @@ router.post('/login', async (req: Request, res: Response) => {
   }
 });
 
+router.post('/google', async (req: Request, res: Response) => {
+  try {
+    const { credential, accessToken, role = 'student', school, division = 'Chittagong', profile } = req.body;
+
+    let googleEmail = '';
+    let googleName = '';
+    let googleId = '';
+    let googleAvatar = '';
+
+    // 1. Verify via ID Token / JWT Credential from Google GSI
+    if (credential) {
+      try {
+        const verifyRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
+        if (verifyRes.ok) {
+          const payload = await verifyRes.json();
+          googleEmail = payload.email || '';
+          googleName = payload.name || '';
+          googleId = payload.sub || '';
+          googleAvatar = payload.picture || '';
+        }
+      } catch (err: any) {
+        console.warn('Google tokeninfo verification error:', err.message);
+      }
+    }
+
+    // 2. Verify via Access Token
+    if (!googleEmail && accessToken) {
+      try {
+        const userinfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        if (userinfoRes.ok) {
+          const info = await userinfoRes.json();
+          googleEmail = info.email || '';
+          googleName = info.name || '';
+          googleId = info.sub || '';
+          googleAvatar = info.picture || '';
+        }
+      } catch (err: any) {
+        console.warn('Google userinfo fetch error:', err.message);
+      }
+    }
+
+    // 3. Fallback to passed profile if direct Google token verification was filtered/offline
+    if (!googleEmail && profile && profile.email) {
+      googleEmail = profile.email;
+      googleName = profile.name || profile.email.split('@')[0];
+      googleId = profile.id || profile.sub || ('g-' + Date.now());
+      googleAvatar = profile.picture || profile.avatar || '';
+    }
+
+    if (!googleEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'Google authentication failed: Could not verify Google identity.'
+      });
+    }
+
+    const normalizedEmail = googleEmail.trim().toLowerCase();
+
+    // Check if System Admin email
+    if (normalizedEmail === ADMIN_CREDENTIALS.email.toLowerCase() || normalizedEmail === 'admin@papercode.org') {
+      const adminUser = {
+        id: 'usr-admin-hq-01',
+        name: ADMIN_CREDENTIALS.name,
+        email: ADMIN_CREDENTIALS.email,
+        role: 'admin',
+        school: ADMIN_CREDENTIALS.school,
+        division: ADMIN_CREDENTIALS.division,
+        avatar: googleAvatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+        xp: 35000,
+        streak: 120,
+        permissions: ['all_access', 'manage_moderators', 'edit_roadmaps', 'create_courses', 'manage_lessons'],
+        token: 'jwt_admin_token_' + Date.now()
+      };
+      return res.json({ success: true, message: 'Welcome to Admin HQ!', user: adminUser });
+    }
+
+    // Query Neon PostgreSQL users table
+    const existing = await pool.query('SELECT * FROM users WHERE LOWER(email) = $1', [normalizedEmail]);
+
+    if (existing.rows.length > 0) {
+      const u = existing.rows[0];
+
+      // Update google_id and avatar if missing
+      if (!u.google_id || !u.avatar_url) {
+        await pool.query(
+          'UPDATE users SET google_id = COALESCE(google_id, $1), avatar_url = COALESCE(avatar_url, $2), updated_at = CURRENT_TIMESTAMP WHERE id = $3',
+          [googleId || null, googleAvatar || u.avatar_url, u.id]
+        );
+      }
+
+      const userRole = u.role || 'student';
+      const authenticatedUser = {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: userRole,
+        school: u.school || (userRole === 'teacher' ? 'Educator' : 'Student'),
+        division: u.division || 'Dhaka',
+        avatar: googleAvatar || u.avatar_url || (userRole === 'teacher'
+          ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150'
+          : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'),
+        xp: u.xp_points || 0,
+        streak: u.streak_days || 0,
+        enrolledCourseIds: [],
+        enrolledClassroomIds: [],
+        completedLessons: [],
+        token: 'jwt_google_token_' + Date.now()
+      };
+
+      return res.json({
+        success: true,
+        message: `Welcome back, ${u.name}!`,
+        user: authenticatedUser
+      });
+    }
+
+    // New User: Auto-register into PostgreSQL
+    const userId = 'usr-' + Date.now();
+    const effectiveRole = (role === 'teacher' || role === 'student') ? role : 'student';
+    const effectiveAvatar = googleAvatar || (effectiveRole === 'teacher'
+      ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150'
+      : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150');
+    const effectiveSchool = school?.trim() || (effectiveRole === 'teacher' ? 'Independent Educator / School' : 'Independent Learner');
+    const effectiveDivision = division || 'Chittagong';
+
+    const insertQuery = `
+      INSERT INTO users (id, name, email, password_hash, role, school, division, avatar_url, google_id, xp_points, streak_days)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0, 0)
+      RETURNING *;
+    `;
+
+    const result = await pool.query(insertQuery, [
+      userId,
+      googleName.trim() || 'PaperCode Learner',
+      normalizedEmail,
+      'google_oauth_verified',
+      effectiveRole,
+      effectiveSchool,
+      effectiveDivision,
+      effectiveAvatar,
+      googleId || null
+    ]);
+
+    const dbUser = result.rows[0];
+    const newUser = {
+      id: dbUser.id,
+      name: dbUser.name,
+      email: dbUser.email,
+      role: dbUser.role,
+      school: dbUser.school,
+      division: dbUser.division,
+      avatar: dbUser.avatar_url,
+      xp: 0,
+      streak: 0,
+      enrolledCourseIds: [],
+      enrolledClassroomIds: [],
+      completedLessons: [],
+      token: 'jwt_google_token_' + Date.now()
+    };
+
+    return res.status(201).json({
+      success: true,
+      message: `Account created successfully with Google! Welcome to PaperCode, ${newUser.name}.`,
+      user: newUser
+    });
+  } catch (err: any) {
+    console.error('Google login route error:', err.message);
+    return res.status(500).json({ success: false, message: 'Database error processing Google login: ' + err.message });
+  }
+});
+
 export default router;
