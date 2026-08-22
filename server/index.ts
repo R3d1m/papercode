@@ -1,5 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
+import path from 'path';
+import fs from 'fs';
 import { config } from './config';
 import { seedDatabase } from './db/seed';
 import authRoutes from './routes/auth';
@@ -35,14 +37,8 @@ app.use('/api/classrooms', classroomsRoutes);
 app.use('/api/submissions', submissionsRoutes);
 app.use('/api/blogs', blogsRoutes);
 app.use('/api/admin', adminRoutes);
-app.get('/', (req: Request, res: Response) => {
-  res.json({
-    status: 'ok',
-    message: 'PaperCode Backend API is active. Web app runs on http://localhost:3000',
-    documentation: '/api/health'
-  });
-});
 
+// Catch-all 404 for unmatched API routes
 app.use('/api', (req: Request, res: Response) => {
   res.status(404).json({
     success: false,
@@ -50,12 +46,29 @@ app.use('/api', (req: Request, res: Response) => {
   });
 });
 
-app.use((req: Request, res: Response) => {
-  res.status(404).json({
-    success: false,
-    message: `Resource '${req.originalUrl}' was not found.`
+// Serve frontend in production / Render unified deployment
+const distPath = path.resolve(process.cwd(), 'dist');
+if (fs.existsSync(path.join(distPath, 'index.html'))) {
+  app.use(express.static(distPath));
+  app.use((req: Request, res: Response) => {
+    res.sendFile('index.html', { root: distPath });
   });
-});
+} else {
+  app.get('/', (req: Request, res: Response) => {
+    res.json({
+      status: 'ok',
+      message: 'PaperCode Backend API is active. Web app runs on http://localhost:3000',
+      documentation: '/api/health'
+    });
+  });
+
+  app.use((req: Request, res: Response) => {
+    res.status(404).json({
+      success: false,
+      message: `Resource '${req.originalUrl}' was not found.`
+    });
+  });
+}
 
 // Initialize Database & Start Server
 seedDatabase().then(() => {
