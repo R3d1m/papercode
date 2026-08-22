@@ -47,17 +47,41 @@ app.use('/api', (req: Request, res: Response) => {
 });
 
 // Serve frontend in production / Render unified deployment
-const distPath = path.resolve(process.cwd(), 'dist');
-if (fs.existsSync(path.join(distPath, 'index.html'))) {
-  app.use(express.static(distPath));
+// Try multiple possible dist locations for maximum compatibility
+const possibleDistPaths = [
+  path.resolve(process.cwd(), 'dist'),
+  path.resolve(new URL('.', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'), '..', 'dist'),
+  path.resolve('/opt/render/project/src', 'dist'),
+];
+
+let distPath: string | null = null;
+for (const candidate of possibleDistPaths) {
+  const normalizedCandidate = path.normalize(candidate);
+  if (fs.existsSync(path.join(normalizedCandidate, 'index.html'))) {
+    distPath = normalizedCandidate;
+    console.log(`[SPA] Serving frontend from: ${distPath}`);
+    break;
+  }
+}
+
+if (distPath) {
+  // Serve all static assets (JS, CSS, images, _redirects, etc.)
+  app.use(express.static(distPath, { maxAge: '1d', etag: true }));
+
+  // Read index.html once at startup — avoids Express 5 sendFile path resolution issues
+  const indexHtml = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+
+  // SPA catch-all: any non-API, non-static request gets index.html with 200 OK
+  // This MUST come after express.static so real files are served directly
   app.use((req: Request, res: Response) => {
-    res.sendFile('index.html', { root: distPath });
+    res.status(200).type('html').send(indexHtml);
   });
 } else {
+  console.warn('[SPA] No dist/index.html found. Tried:', possibleDistPaths.map(p => path.normalize(p)));
   app.get('/', (req: Request, res: Response) => {
     res.json({
       status: 'ok',
-      message: 'PaperCode Backend API is active. Web app runs on http://localhost:3000',
+      message: 'PaperCode Backend API is active. Frontend build not found — run npm run build first.',
       documentation: '/api/health'
     });
   });
@@ -65,7 +89,7 @@ if (fs.existsSync(path.join(distPath, 'index.html'))) {
   app.use((req: Request, res: Response) => {
     res.status(404).json({
       success: false,
-      message: `Resource '${req.originalUrl}' was not found.`
+      message: `Resource '${req.originalUrl}' was not found. Frontend may not be built.`
     });
   });
 }
