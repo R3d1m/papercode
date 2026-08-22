@@ -27,7 +27,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAuth }) => {
             <div className="flex items-center space-x-1.5">
               <span className="font-extrabold text-2xl tracking-tight text-ink">PaperCode</span>
               <span className="text-[10px] uppercase font-mono px-2 py-0.5 bg-ink text-highlighter rounded-full font-bold">
-                BD 🇧🇩
+                BD
               </span>
             </div>
           </div>

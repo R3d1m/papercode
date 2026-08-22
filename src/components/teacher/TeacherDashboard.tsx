@@ -48,16 +48,22 @@ export const TeacherDashboard: React.FC = () => {
   const [asgMaxScore, setAsgMaxScore] = useState(100);
   const [asgDesc, setAsgDesc] = useState('');
 
+  // Submit Freezing states
+  const [isSubmittingClassroom, setIsSubmittingClassroom] = useState(false);
+  const [isSubmittingAssignment, setIsSubmittingAssignment] = useState(false);
+
   const teacherClassrooms = classrooms.filter(c => c.teacherId === currentUser.id);
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!className.trim() || !subject.trim()) return;
+    if (!className.trim() || !subject.trim() || isSubmittingClassroom) return;
+    setIsSubmittingClassroom(true);
     createClassroom(className.trim(), grade, subject.trim());
     setCreateModalOpen(false);
     setClassName('');
     setSubject('');
     confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
+    setTimeout(() => setIsSubmittingClassroom(false), 1000);
   };
 
   const handleToggleCourse = (courseId: string) => {
@@ -73,7 +79,8 @@ export const TeacherDashboard: React.FC = () => {
 
   const handleCreateAssignment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!managingClassroom || !asgTitle.trim()) return;
+    if (!managingClassroom || !asgTitle.trim() || isSubmittingAssignment) return;
+    setIsSubmittingAssignment(true);
 
     addAssignmentToClassroom(managingClassroom.id, {
       title: asgTitle.trim(),
@@ -87,6 +94,7 @@ export const TeacherDashboard: React.FC = () => {
     setAsgDueDate('');
     setAsgDesc('');
     confetti({ particleCount: 50, spread: 50, origin: { y: 0.6 } });
+    setTimeout(() => setIsSubmittingAssignment(false), 1000);
   };
 
   return (
@@ -274,9 +282,10 @@ export const TeacherDashboard: React.FC = () => {
                   type="submit"
                   variant="primary"
                   size="md"
+                  disabled={isSubmittingClassroom}
                   icon={<Plus className="w-4 h-4" />}
                 >
-                  Create Classroom (Free)
+                  {isSubmittingClassroom ? 'Creating Classroom...' : 'Create Classroom (Free)'}
                 </PillButton>
               </div>
             </form>
@@ -485,9 +494,10 @@ export const TeacherDashboard: React.FC = () => {
                       type="submit"
                       variant="primary"
                       size="sm"
+                      disabled={isSubmittingAssignment}
                       icon={<Plus className="w-3.5 h-3.5" />}
                     >
-                      Assign to Class
+                      {isSubmittingAssignment ? 'Assigning...' : 'Assign to Class'}
                     </PillButton>
                   </div>
                 </form>

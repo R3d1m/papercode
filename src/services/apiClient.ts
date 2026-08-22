@@ -251,6 +251,26 @@ export const apiClient = {
     return { success: false };
   },
 
+  async deleteLesson(courseId: string, moduleId: string, lessonId: string) {
+    try {
+      const res = await fetch(API_BASE + '/courses/' + courseId + '/modules/' + moduleId + '/lessons/' + lessonId, {
+        method: 'DELETE'
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {}
+    return { success: false };
+  },
+
+  async deleteModule(courseId: string, moduleId: string) {
+    try {
+      const res = await fetch(API_BASE + '/courses/' + courseId + '/modules/' + moduleId, {
+        method: 'DELETE'
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {}
+    return { success: false };
+  },
+
   async deleteCourse(courseId: string) {
     try {
       const res = await fetch(API_BASE + '/courses/' + courseId, {
@@ -269,7 +289,7 @@ export const apiClient = {
     return { success: true, classrooms: [] };
   },
 
-  async createClassroom(data: { name: string; subject: string; grade: string; teacherId?: string; courseIds?: string[] }) {
+  async createClassroom(data: { name: string; subject: string; grade: string; teacherId?: string; courseIds?: string[]; joinCode?: string }) {
     try {
       const res = await fetch(API_BASE + '/classrooms', {
         method: 'POST',
@@ -278,7 +298,19 @@ export const apiClient = {
       });
       if (res.ok) return await res.json();
     } catch (e) {}
-    return { success: true };
+    return { success: false };
+  },
+
+  async updateClassroomCourses(classroomId: string, courseIds: string[]) {
+    try {
+      const res = await fetch(API_BASE + '/classrooms/' + classroomId + '/courses', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courseIds })
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {}
+    return { success: false };
   },
 
   async joinClassroom(code: string, studentId?: string) {

@@ -40,6 +40,31 @@ router.get('/', async (req: Request, res: Response) => {
       });
     }
 
+    // Fetch all assignments from PostgreSQL
+    let assignmentsRes;
+    try {
+      assignmentsRes = await pool.query('SELECT * FROM assignments ORDER BY created_at DESC');
+    } catch {
+      assignmentsRes = { rows: [] };
+    }
+
+    const assignmentsByClass: Record<string, any[]> = {};
+    for (const a of assignmentsRes.rows) {
+      if (!assignmentsByClass[a.classroom_id]) assignmentsByClass[a.classroom_id] = [];
+      assignmentsByClass[a.classroom_id].push({
+        id: a.id,
+        title: a.title,
+        description: a.description,
+        dueDate: a.due_date,
+        maxScore: a.max_score,
+        assignedDate: a.assigned_date,
+        courseTitle: a.course_title,
+        status: 'active',
+        totalSubmissions: 0,
+        totalStudents: rosterByClass[a.classroom_id]?.length || 0
+      });
+    }
+
     const classrooms = classRes.rows.map(r => ({
       id: r.id,
       name: r.name,
@@ -48,10 +73,11 @@ router.get('/', async (req: Request, res: Response) => {
       teacherId: r.teacher_id,
       teacherName: 'Teacher',
       joinCode: r.join_code || 'PC-1000',
+      code: r.join_code || 'PC-1000',
       archived: false,
       roster: rosterByClass[r.id] || [],
-      assignments: assignmentsStore[r.id] || [],
-      courseIds: ['crs-py-basics']
+      assignments: assignmentsByClass[r.id] || [],
+      courseIds: Array.isArray(r.course_ids) ? r.course_ids : (r.course_ids ? [r.course_ids] : ['crs-py-101'])
     }));
 
     return res.json({ success: true, classrooms });
@@ -64,12 +90,26 @@ router.get('/', async (req: Request, res: Response) => {
 // POST: Create a new Classroom in PostgreSQL
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { name, subject, grade, teacherId = 'usr-teacher-1', courseIds = ['crs-py-basics'] } = req.body;
+    const { name, subject, grade, teacherId = 'usr-tch-001', courseIds = ['crs-py-101'], joinCode: requestedJoinCode } = req.body;
     const id = 'cls-' + Date.now();
-    const joinCode = 'PC-' + Math.floor(1000 + Math.random() * 9000);
+    const joinCode = (requestedJoinCode || ('PC-' + Math.floor(1000 + Math.random() * 9000))).trim().toUpperCase();
 
-    const query = 'INSERT INTO classrooms (id, teacher_id, name, subject, grade, join_code, created_at) VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *;';
-    const result = await pool.query(query, [id, teacherId, name, subject, grade, joinCode]);
+    // Verify teacherId in users table
+    let validTeacherId = teacherId;
+    if (validTeacherId) {
+      const tchCheck = await pool.query('SELECT id FROM users WHERE id = $1', [validTeacherId]);
+      if (tchCheck.rows.length === 0) {
+        const fallbackUser = await pool.query("SELECT id FROM users WHERE role IN ('teacher', 'admin') LIMIT 1");
+        validTeacherId = fallbackUser.rows[0]?.id || null;
+      }
+    }
+
+    const query = `
+      INSERT INTO classrooms (id, teacher_id, name, subject, grade, join_code, course_ids, created_at) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) 
+      RETURNING *;
+    `;
+    const result = await pool.query(query, [id, validTeacherId, name, subject, grade, joinCode, courseIds]);
     const r = result.rows[0];
 
     const classroom = {
@@ -80,14 +120,28 @@ router.post('/', async (req: Request, res: Response) => {
       teacherId: r.teacher_id,
       teacherName: 'Teacher',
       joinCode: r.join_code,
+      code: r.join_code,
       archived: false,
       roster: [],
       assignments: [],
-      courseIds: courseIds
+      courseIds: Array.isArray(r.course_ids) ? r.course_ids : courseIds
     };
     return res.status(201).json({ success: true, classroom });
   } catch (err: any) {
     console.error('Error creating classroom:', err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// PUT: Update Classroom Attached Courses
+router.put('/:id/courses', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { courseIds } = req.body;
+    await pool.query('UPDATE classrooms SET course_ids = $1 WHERE id = $2', [courseIds || [], id]);
+    return res.json({ success: true, message: 'Classroom courses updated successfully.', courseIds });
+  } catch (err: any) {
+    console.error('Error updating classroom courses:', err.message);
     return res.status(500).json({ success: false, message: err.message });
   }
 });
@@ -158,26 +212,51 @@ router.delete('/:id/students/:studentId', async (req: Request, res: Response) =>
 router.post('/:id/assignments', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { title, dueDate, maxScore = 100, description, courseTitle } = req.body;
-    
+    const { id: reqId, title, dueDate, maxScore = 100, description, assignedDate, courseTitle } = req.body;
+    const asgId = reqId || ('asg-' + Date.now());
+    const effectiveAssignedDate = assignedDate || new Date().toISOString().slice(0, 10);
+    const effectiveDueDate = dueDate || new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+
+    const query = `
+      INSERT INTO assignments (id, classroom_id, title, description, due_date, max_score, assigned_date, course_title, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+      ON CONFLICT (id) DO UPDATE SET
+        title = EXCLUDED.title,
+        description = EXCLUDED.description,
+        due_date = EXCLUDED.due_date,
+        max_score = EXCLUDED.max_score,
+        assigned_date = EXCLUDED.assigned_date,
+        course_title = EXCLUDED.course_title
+      RETURNING *;
+    `;
+    const result = await pool.query(query, [
+      asgId,
+      id,
+      title || 'New Assignment',
+      description || 'Complete the assigned exercises.',
+      effectiveDueDate,
+      maxScore,
+      effectiveAssignedDate,
+      courseTitle || 'Python 3 Foundations'
+    ]);
+
+    const r = result.rows[0];
     const newAssignment = {
-      id: 'asg-' + Date.now(),
-      title: title || 'New Assignment',
-      assignedDate: new Date().toISOString().slice(0, 10),
-      dueDate: dueDate || new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      dueDate: r.due_date,
+      maxScore: r.max_score,
+      assignedDate: r.assigned_date,
+      courseTitle: r.course_title,
       totalSubmissions: 0,
       totalStudents: 0,
-      status: 'active',
-      description: description || 'Complete the assigned exercises.',
-      courseTitle: courseTitle || 'Python 3 Foundations',
-      maxScore
+      status: 'active'
     };
-
-    if (!assignmentsStore[id]) assignmentsStore[id] = [];
-    assignmentsStore[id].push(newAssignment);
 
     return res.status(201).json({ success: true, assignment: newAssignment });
   } catch (err: any) {
+    console.error('Error saving assignment in DB:', err.message);
     return res.status(500).json({ success: false, message: err.message });
   }
 });
@@ -185,10 +264,8 @@ router.post('/:id/assignments', async (req: Request, res: Response) => {
 // DELETE: Delete Assignment from Classroom
 router.delete('/:id/assignments/:assignmentId', async (req: Request, res: Response) => {
   try {
-    const { id, assignmentId } = req.params;
-    if (assignmentsStore[id]) {
-      assignmentsStore[id] = assignmentsStore[id].filter(a => a.id !== assignmentId);
-    }
+    const { assignmentId } = req.params;
+    await pool.query('DELETE FROM assignments WHERE id = $1', [assignmentId]);
     return res.json({ success: true, message: 'Assignment deleted.' });
   } catch (err: any) {
     return res.status(500).json({ success: false, message: err.message });

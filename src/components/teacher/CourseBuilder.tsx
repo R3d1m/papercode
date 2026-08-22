@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { apiClient } from '../../services/apiClient';
 import { useApp } from '../../context/AppContext';
 import { BentoCard } from '../common/BentoCard';
 import { PillButton } from '../common/PillButton';
@@ -28,16 +29,21 @@ import {
 import confetti from 'canvas-confetti';
 
 export const CourseBuilder: React.FC = () => {
-  const { courses, addCourse, addModuleToCourse, updateLesson, deleteLesson, currentUser } = useApp();
+  const { courses, addCourse, deleteCourse, addModuleToCourse, deleteModule, updateLesson, deleteLesson, currentUser } = useApp();
 
-  const myCourses = courses.filter(c => c.authorId === currentUser.id);
+  const myCourses = currentUser.role === 'admin' ? courses : courses.filter(c => c.authorId === currentUser.id);
+  const otherCourses = currentUser.role === 'admin' ? [] : courses.filter(c => c.authorId && c.authorId !== currentUser.id);
 
   // Navigation hierarchy state:
-  const [step, setStep] = useState<'courses_list' | 'course_detail' | 'create_course' | 'create_module' | 'create_lesson'>('courses_list');
+  const [step, setStep] = useState<'courses_list' | 'course_detail' | 'create_course' | 'create_module' | 'create_lesson' | 'preview_lesson'>('courses_list');
   const [selectedCourseId, setSelectedCourseId] = useState<string>(myCourses[0]?.id || courses[0]?.id || '');
   const [selectedModuleId, setSelectedModuleId] = useState<string>('');
   
   const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
+  const [previewingLesson, setPreviewingLesson] = useState<Lesson | null>(null);
+  const [isSubmittingCourse, setIsSubmittingCourse] = useState(false);
+  const [isSubmittingModule, setIsSubmittingModule] = useState(false);
+  const [isSubmittingLesson, setIsSubmittingLesson] = useState(false);
 
   // Course Form
   const [newCourseTitle, setNewCourseTitle] = useState<string>('');
@@ -188,12 +194,6 @@ export const CourseBuilder: React.FC = () => {
     setStep('create_lesson');
   };
 
-  const handleDeleteLessonConfirm = (moduleId: string, lessonId: string) => {
-    if (window.confirm('Are you sure you want to delete this lesson?')) {
-      deleteLesson(selectedCourse.id, moduleId, lessonId);
-    }
-  };
-
   // Block Manipulation Handlers
   const addTheoryBlock = () => {
     const newBlock: TheoryBlock = {
@@ -288,51 +288,93 @@ export const CourseBuilder: React.FC = () => {
     setLessonBlocks(updated);
   };
 
+  
+  
+  const handleDeleteModuleConfirm = (courseId: string, moduleId: string, moduleTitle: string) => {
+    if (window.confirm(`Are you sure you want to delete module "${moduleTitle}" and all its lessons? This action cannot be undone.`)) {
+      deleteModule(courseId, moduleId);
+    }
+  };
+
+  const handleDeleteLessonConfirm = (courseId: string, moduleId: string, lessonId: string, lessonTitle?: string) => {
+    if (window.confirm(`Are you sure you want to delete lesson ${lessonTitle ? `"${lessonTitle}"` : ''}? This action cannot be undone.`)) {
+      deleteLesson(courseId, moduleId, lessonId);
+    }
+  };
+
+  const handleDeleteCourseConfirm = (courseId: string, courseTitle: string) => {
+    if (window.confirm(`Are you sure you want to delete "${courseTitle}"? This action cannot be undone and will delete all modules.`)) {
+      deleteCourse(courseId);
+      apiClient.deleteCourse(courseId).catch(() => {});
+      if (selectedCourseId === courseId) {
+        setSelectedCourseId(courses.find(c => c.id !== courseId)?.id || '');
+        setStep('courses_list');
+      }
+    }
+  };
+
   // Course / Module creation handlers
   const handleCreateCourse = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCourseTitle.trim()) return;
+    if (!newCourseTitle.trim() || isSubmittingCourse) return;
 
+    setIsSubmittingCourse(true);
     const newCourseObj: Course = {
       id: 'crs-' + Date.now(),
-      title: newCourseTitle,
-      subtitle: newCourseSubtitle || 'Course created by Teacher',
-      description: newCourseDesc || 'Teacher authored course curriculum.',
+      title: newCourseTitle.trim(),
+      subtitle: newCourseSubtitle.trim() || 'Course created by Teacher',
+      description: newCourseDesc.trim() || 'Teacher authored course curriculum.',
       category: newCourseCategory,
       level: newCourseLevel,
       estimatedHours: 10,
-      publishedBy: 'teacher',
-      authorName: 'Engr. Nusrat Jahan',
+      publishedBy: currentUser.role === 'admin' ? 'admin' : 'teacher',
+      authorId: currentUser.id,
+      authorName: currentUser.name || 'Verified Educator',
       colorAccent: '#E6F94E',
+      isPublished: true,
       modules: []
     };
 
     addCourse(newCourseObj);
+    apiClient.createCourse(newCourseObj).catch(() => {});
+    setNewCourseTitle('');
+    setNewCourseSubtitle('');
+    setNewCourseDesc('');
     setSelectedCourseId(newCourseObj.id);
     setStep('course_detail');
     confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
+    setTimeout(() => setIsSubmittingCourse(false), 1000);
   };
 
-  const handleCreateModule = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newModuleTitle.trim()) return;
+  const handleCreateModule = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!newModuleTitle.trim() || isSubmittingModule) return;
 
+    const targetCourse = courses.find(c => c.id === selectedCourseId) || selectedCourse;
+    if (!targetCourse) return;
+
+    setIsSubmittingModule(true);
     const newModuleObj: Module = {
       id: 'mod-' + Date.now(),
-      title: newModuleTitle,
-      description: newModuleDesc || 'Module units & practice exercises.',
+      title: newModuleTitle.trim(),
+      description: newModuleDesc.trim() || 'Module units & practice exercises.',
       category: newModuleCategory,
       isPublished: true,
       lessons: []
     };
 
-    addModuleToCourse(selectedCourse.id, newModuleObj);
+    addModuleToCourse(targetCourse.id, newModuleObj);
+    apiClient.createModule(targetCourse.id, newModuleObj).catch(() => {});
+    setNewModuleTitle('');
+    setNewModuleDesc('');
     setStep('course_detail');
     confetti({ particleCount: 60, spread: 50, origin: { y: 0.6 } });
+    setTimeout(() => setIsSubmittingModule(false), 1000);
   };
 
   const handleSaveOrUpdateLesson = () => {
-    if (!newLessonTitle.trim() || lessonBlocks.length === 0) return;
+    if (!newLessonTitle.trim() || lessonBlocks.length === 0 || isSubmittingLesson) return;
+    setIsSubmittingLesson(true);
 
     const firstMcq = (lessonBlocks.find(b => b.type === 'mcq') as McqBlock) || {
       id: 'mcq-1',
@@ -414,6 +456,7 @@ export const CourseBuilder: React.FC = () => {
 
     setTimeout(() => {
       setPublishSuccess(false);
+      setIsSubmittingLesson(false);
       setStep('course_detail');
     }, 1200);
   };
@@ -508,7 +551,17 @@ export const CourseBuilder: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-ink/15 flex items-center justify-end">
+                  <div className="pt-4 border-t border-ink/15 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteCourseConfirm(course.id, course.title)}
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors flex items-center gap-1.5 text-xs font-bold"
+                      title="Delete this course"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Delete</span>
+                    </button>
+
                     <PillButton
                       variant="highlighter"
                       size="md"
@@ -527,11 +580,84 @@ export const CourseBuilder: React.FC = () => {
             </div>
           )}
 
+          {/* SECTION 2: EXPLORE COURSES CREATED BY OTHER EDUCATORS */}
+          {otherCourses.length > 0 && (
+            <div className="space-y-6 pt-6 border-t-2 border-ink/10">
+              <div>
+                <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-paper-muted border border-ink/30 text-ink font-mono text-xs font-extrabold mb-1">
+                  <span>Community Curriculum</span>
+                </div>
+                <h2 className="text-2xl font-extrabold text-ink">
+                  Explore Courses Created by Other Educators
+                </h2>
+                <p className="text-xs sm:text-sm text-graphite mt-1">
+                  Inspect module outlines and exercise challenges created by educators across Bangladesh. (Read-only)
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {otherCourses.map((course) => (
+                  <BentoCard
+                    key={course.id}
+                    variant="white"
+                    className="space-y-5 p-8 border-2 border-ink shadow-solid-md flex flex-col justify-between"
+                  >
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="px-3 py-1 bg-paper-muted border border-ink/30 rounded-full font-mono text-xs font-bold text-ink">
+                          {course.category} • {course.level}
+                        </span>
+                        <span className="text-xs font-mono font-bold text-graphite">
+                          By {course.authorName || 'Educator'}
+                        </span>
+                      </div>
+
+                      <div>
+                        <h3 className="text-2xl font-extrabold text-ink">{course.title}</h3>
+                        <p className="text-xs sm:text-sm text-graphite mt-1 leading-relaxed">
+                          {course.description}
+                        </p>
+                      </div>
+
+                      <div className="space-y-1.5 pt-2 border-t border-ink/15 text-xs text-graphite">
+                        <strong className="text-ink block">Modules inside this course ({(course.modules || []).length}):</strong>
+                        {(course.modules || []).map((m) => (
+                          <div key={m.id} className="flex items-center space-x-2">
+                            <span className="font-mono font-bold text-stamp">•</span>
+                            <span>{m.title} ({(m.lessons || []).length} lessons)</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-ink/15 flex items-center justify-between">
+                      <span className="text-[11px] font-mono text-graphite font-bold">🔒 Read-Only Preview</span>
+                      <PillButton
+                        variant="secondary"
+                        size="md"
+                        onClick={() => {
+                          setSelectedCourseId(course.id);
+                          setStep('course_detail');
+                        }}
+                        className="btn-bounce"
+                        icon={<ChevronRight className="w-4 h-4" />}
+                      >
+                        Inspect Modules & Lessons ➔
+                      </PillButton>
+                    </div>
+                  </BentoCard>
+                ))}
+              </div>
+            </div>
+          )}
+
         </div>
       )}
 
       {/* LEVEL 2: COURSE DETAIL & MODULES LIST */}
-      {step === 'course_detail' && (
+      {step === 'course_detail' && (() => {
+        const isMyCourse = selectedCourse.authorId === currentUser.id || !selectedCourse.authorId || currentUser.role === 'admin';
+        return (
         <div className="space-y-8">
           
           <div className="flex items-center justify-between">
@@ -543,28 +669,51 @@ export const CourseBuilder: React.FC = () => {
               <span>Back to All Courses</span>
             </button>
 
-            <div className="flex items-center space-x-3">
-              <PillButton
-                variant="secondary"
-                size="sm"
-                onClick={() => setStep('create_module')}
-                className="btn-bounce"
-                icon={<FolderPlus className="w-4 h-4" />}
-              >
-                + Add New Module
-              </PillButton>
+            {isMyCourse ? (
+              <div className="flex items-center space-x-3">
+                <button
+                  type="button"
+                  onClick={() => handleDeleteCourseConfirm(selectedCourse.id, selectedCourse.title)}
+                  className="px-3 py-1.5 text-red-600 hover:bg-red-50 border border-red-200 hover:border-red-400 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-colors"
+                  title="Delete this entire course"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Course</span>
+                </button>
 
-              <PillButton
-                variant="stamp"
-                size="sm"
-                onClick={() => handleStartNewLesson(selectedCourse.modules?.[0]?.id)}
-                className="btn-bounce"
-                icon={<FilePlus className="w-4 h-4" />}
-              >
-                + Add New Lesson
-              </PillButton>
-            </div>
+                <PillButton
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setStep('create_module')}
+                  className="btn-bounce"
+                  icon={<FolderPlus className="w-4 h-4" />}
+                >
+                  + Add New Module
+                </PillButton>
+
+                <PillButton
+                  variant="stamp"
+                  size="sm"
+                  onClick={() => handleStartNewLesson(selectedCourse.modules?.[0]?.id)}
+                  className="btn-bounce"
+                  icon={<FilePlus className="w-4 h-4" />}
+                >
+                  + Add New Lesson
+                </PillButton>
+              </div>
+            ) : (
+              <span className="px-3 py-1.5 bg-paper-muted border-2 border-ink rounded-full text-xs font-mono font-extrabold text-ink shadow-solid-xs">
+                🔒 Read-Only Inspection Mode
+              </span>
+            )}
           </div>
+
+          {!isMyCourse && (
+            <div className="p-4 bg-amber-50 border-2 border-ink rounded-2xl flex items-center justify-between text-xs text-ink font-bold shadow-solid-xs">
+              <span>🔒 You are inspecting a course created by <strong>{selectedCourse.authorName || 'Other Educator'}</strong>. You can preview all modules, theory, and exercises in read-only mode.</span>
+              <span className="px-2.5 py-1 bg-paper-card border border-ink rounded-lg font-mono text-[10px] font-extrabold">Read Only</span>
+            </div>
+          )}
 
           <div className="p-8 bg-paper-card border-[2px] border-ink rounded-bento shadow-solid-md space-y-2">
             <span className="px-3 py-1 bg-highlighter border border-ink text-ink font-mono text-xs font-extrabold rounded-full">
@@ -590,15 +739,33 @@ export const CourseBuilder: React.FC = () => {
                     <p className="text-xs text-graphite">{mod.description}</p>
                   </div>
 
-                  <PillButton
-                    variant="highlighter"
-                    size="sm"
-                    onClick={() => handleStartNewLesson(mod.id)}
-                    className="btn-bounce"
-                    icon={<Plus className="w-3.5 h-3.5" />}
-                  >
-                    + Add Lesson
-                  </PillButton>
+                  {isMyCourse ? (
+                    <div className="flex items-center space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteModuleConfirm(selectedCourse.id, mod.id, mod.title)}
+                        className="px-2.5 py-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg text-xs font-bold transition-colors flex items-center gap-1"
+                        title="Delete this module"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete Module</span>
+                      </button>
+
+                      <PillButton
+                        variant="highlighter"
+                        size="sm"
+                        onClick={() => handleStartNewLesson(mod.id)}
+                        className="btn-bounce"
+                        icon={<Plus className="w-3.5 h-3.5" />}
+                      >
+                        + Add Lesson
+                      </PillButton>
+                    </div>
+                  ) : (
+                    <span className="text-[11px] font-mono text-graphite font-bold">
+                      {(mod.lessons || []).length} Lessons
+                    </span>
+                  )}
                 </div>
 
                 {/* Published Lessons list with EDIT buttons */}
@@ -620,24 +787,40 @@ export const CourseBuilder: React.FC = () => {
                         </div>
 
                         <div className="flex items-center space-x-1.5 flex-shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => handleStartEditLesson(mod.id, les)}
-                            className="px-2.5 py-1.5 bg-highlighter hover:bg-highlighter-hover border border-ink rounded-lg font-bold text-[11px] text-ink flex items-center gap-1 shadow-solid-xs btn-bounce"
-                            title="Edit this published lesson"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                            <span>Edit</span>
-                          </button>
+                          {isMyCourse ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleStartEditLesson(mod.id, les)}
+                                className="px-2.5 py-1.5 bg-highlighter hover:bg-highlighter-hover border border-ink rounded-lg font-bold text-[11px] text-ink flex items-center gap-1 shadow-solid-xs btn-bounce"
+                                title="Edit this published lesson"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                                <span>Edit</span>
+                              </button>
 
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteLessonConfirm(mod.id, les.id)}
-                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                            title="Delete Lesson"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteLessonConfirm(selectedCourse.id, mod.id, les.id, les.title)}
+                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                                title="Delete Lesson"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPreviewingLesson(les);
+                                setStep('preview_lesson');
+                              }}
+                              className="px-3 py-1.5 bg-paper-card hover:bg-paper-muted border border-ink rounded-lg font-bold text-[11px] text-ink flex items-center gap-1.5 shadow-solid-xs btn-bounce"
+                              title="Inspect lesson contents in read-only mode"
+                            >
+                              <span>👁️ Inspect</span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -657,7 +840,8 @@ export const CourseBuilder: React.FC = () => {
           </div>
 
         </div>
-      )}
+        );
+      })()}
 
       {/* MODAL / FORM: CREATE NEW COURSE */}
       {step === 'create_course' && (
@@ -731,8 +915,8 @@ export const CourseBuilder: React.FC = () => {
               <PillButton variant="secondary" size="md" onClick={() => setStep('courses_list')}>
                 Cancel
               </PillButton>
-              <PillButton variant="stamp" size="md" className="btn-bounce">
-                Create Course & Add Modules ➔
+              <PillButton type="submit" variant="stamp" size="md" disabled={isSubmittingCourse} className="btn-bounce">
+                {isSubmittingCourse ? 'Creating Course...' : 'Create Course & Add Modules ➔'}
               </PillButton>
             </div>
           </form>
@@ -780,12 +964,122 @@ export const CourseBuilder: React.FC = () => {
               <PillButton variant="secondary" size="md" onClick={() => setStep('course_detail')}>
                 Cancel
               </PillButton>
-              <PillButton variant="highlighter" size="md" className="btn-bounce">
-                Save Module ➔
+              <PillButton type="submit" variant="highlighter" size="md" disabled={isSubmittingModule} className="btn-bounce">
+                {isSubmittingModule ? 'Saving Module...' : 'Save Module ➔'}
               </PillButton>
             </div>
           </form>
         </BentoCard>
+      )}
+
+      
+      {/* LEVEL 3: READ-ONLY LESSON INSPECTION MODAL / VIEW */}
+      {step === 'preview_lesson' && previewingLesson && (
+        <div className="space-y-6 max-w-4xl mx-auto animate-fadeIn">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setStep('course_detail')}
+              className="flex items-center space-x-2 text-sm font-extrabold text-graphite hover:text-ink transition-colors btn-bounce"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span>Back to Course Outline</span>
+            </button>
+
+            <span className="px-3 py-1 bg-yellow-100 border border-ink rounded-full text-xs font-mono font-extrabold text-ink shadow-solid-xs">
+              🔒 Read-Only Inspection Mode
+            </span>
+          </div>
+
+          <div className="p-8 bg-paper-card border-2 border-ink rounded-bento shadow-solid-md space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="px-3 py-1 bg-highlighter border border-ink text-ink font-mono text-xs font-extrabold rounded-full">
+                Lesson Preview
+              </span>
+              <span className="text-xs font-mono font-bold text-graphite">
+                ⏱ {previewingLesson.durationMinutes || 20} mins • 💎 {previewingLesson.xpReward || 100} XP
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-ink">{previewingLesson.title}</h1>
+            <p className="text-xs sm:text-sm text-graphite font-medium">{previewingLesson.subtitle}</p>
+          </div>
+
+          {/* Theory Notes */}
+          <BentoCard variant="white" className="p-6 sm:p-8 border-2 border-ink shadow-solid-sm space-y-4">
+            <h3 className="text-lg font-extrabold text-ink flex items-center gap-2">
+              <FileText className="w-5 h-5 text-stamp" />
+              <span>Theory Content & Concepts</span>
+            </h3>
+            <div 
+              className="prose prose-sm max-w-none text-ink text-xs sm:text-sm leading-relaxed p-4 bg-paper-light border border-ink/20 rounded-2xl"
+              dangerouslySetInnerHTML={{ __html: previewingLesson.theoryHtml || previewingLesson.theoryContent || 'No theory content.' }}
+            />
+          </BentoCard>
+
+          {/* MCQ Checkpoint */}
+          {previewingLesson.mcq && previewingLesson.mcq.question && (
+            <BentoCard variant="white" className="p-6 sm:p-8 border-2 border-ink shadow-solid-sm space-y-4">
+              <h3 className="text-lg font-extrabold text-ink flex items-center gap-2">
+                <HelpCircle className="w-5 h-5 text-stamp" />
+                <span>Checkpoint Quiz</span>
+              </h3>
+              <div className="p-4 bg-paper-light border border-ink/20 rounded-2xl space-y-3 text-xs">
+                <p className="font-extrabold text-ink text-sm">{previewingLesson.mcq.question}</p>
+                <div className="space-y-2">
+                  {(previewingLesson.mcq.options || []).map((opt: any) => {
+                    const isCorrect = (previewingLesson.mcq.correctOptionIds || [previewingLesson.mcq.correctOptionId]).includes(opt.id);
+                    return (
+                      <div key={opt.id} className={'p-3 rounded-xl border flex items-center justify-between font-medium ' + (isCorrect ? 'bg-green-100 border-green-700 text-green-950 font-bold' : 'bg-white border-ink/20 text-ink')}>
+                        <span>{opt.text}</span>
+                        {isCorrect && <span className="text-[10px] font-mono font-extrabold uppercase text-green-800">✓ Correct Answer</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+                {previewingLesson.mcq.explanation && (
+                  <p className="text-[11px] text-graphite italic pt-1 border-t border-ink/10">
+                    💡 Explanation: {previewingLesson.mcq.explanation}
+                  </p>
+                )}
+              </div>
+            </BentoCard>
+          )}
+
+          {/* Exercise Details */}
+          {previewingLesson.exercise && previewingLesson.exercise.title && (
+            <BentoCard variant="white" className="p-6 sm:p-8 border-2 border-ink shadow-solid-sm space-y-4">
+              <h3 className="text-lg font-extrabold text-ink flex items-center gap-2">
+                <Code2 className="w-5 h-5 text-stamp" />
+                <span>Coding Exercise: {previewingLesson.exercise.title}</span>
+              </h3>
+              <div className="space-y-3 text-xs">
+                <div className="p-4 bg-paper-light border border-ink/20 rounded-2xl space-y-2">
+                  <span className="font-mono text-[10px] uppercase font-extrabold text-stamp block">Challenge Prompt</span>
+                  <p className="text-ink font-medium leading-relaxed">{previewingLesson.exercise.prompt}</p>
+                </div>
+
+                {previewingLesson.exercise.starterCode && (
+                  <div className="space-y-1">
+                    <span className="font-mono text-[10px] uppercase font-bold text-graphite block">Starter Template:</span>
+                    <pre className="p-3 bg-black text-green-400 font-mono text-xs rounded-xl overflow-x-auto">
+                      <code>{previewingLesson.exercise.starterCode}</code>
+                    </pre>
+                  </div>
+                )}
+              </div>
+            </BentoCard>
+          )}
+
+          <div className="pt-2 flex justify-end">
+            <PillButton
+              variant="secondary"
+              size="md"
+              onClick={() => setStep('course_detail')}
+              className="btn-bounce"
+            >
+              Back to Course Outline ➔
+            </PillButton>
+          </div>
+        </div>
       )}
 
       {/* LEVEL 3 & 4: LESSON EDITOR / CREATOR */}
@@ -804,11 +1098,12 @@ export const CourseBuilder: React.FC = () => {
             <PillButton
               variant="stamp"
               size="md"
+              disabled={isSubmittingLesson}
               onClick={handleSaveOrUpdateLesson}
               className="btn-bounce"
               icon={<Save className="w-4 h-4" />}
             >
-              {editingLessonId ? 'Update & Save Published Lesson 🚀' : 'Publish Multi-Item Lesson 🚀'}
+              {isSubmittingLesson ? 'Saving Lesson...' : (editingLessonId ? 'Update & Save Published Lesson 🚀' : 'Publish Multi-Item Lesson 🚀')}
             </PillButton>
           </div>
 

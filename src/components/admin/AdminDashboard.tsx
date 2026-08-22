@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { BentoCard } from '../common/BentoCard';
 import { PillButton } from '../common/PillButton';
+import { CourseBuilder } from '../teacher/CourseBuilder';
 import { apiClient } from '../../services/apiClient';
 import { 
   Users, 
@@ -130,6 +131,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ initialTab = 'vi
   const [newRoadmapBadge, setNewRoadmapBadge] = useState('🏆 National Olympiad Track');
 
   const [isCreatingBlog, setIsCreatingBlog] = useState(false);
+  const [isSubmittingRoadmap, setIsSubmittingRoadmap] = useState(false);
+  const [isSubmittingBlog, setIsSubmittingBlog] = useState(false);
   const [newBlogTitle, setNewBlogTitle] = useState('');
   const [newBlogSubtitle, setNewBlogSubtitle] = useState('');
   const [newBlogCategory, setNewBlogCategory] = useState('Curriculum');
@@ -154,6 +157,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ initialTab = 'vi
       totalXp: 1500,
       enrolledCount: 0,
       isPublished: true,
+      authorId: currentUser.id,
+      authorName: currentUser.name || 'Dr. Rafiqul Islam (Admin HQ)',
       thumbnail: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop&q=80',
       modules: [
         {
@@ -762,120 +767,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ initialTab = 'vi
             </div>
           </div>
 
-        </div>
-      )}
-
-      {/* CREATE COURSE MODAL */}
-      {isCreatingCourse && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/70 backdrop-blur-sm animate-fadeIn">
-          <div className="relative w-full max-w-lg bg-paper-card border-2 border-ink rounded-[28px] p-6 sm:p-8 shadow-solid-xl max-h-[90vh] overflow-y-auto space-y-5">
-            <button
-              type="button"
-              onClick={() => setIsCreatingCourse(false)}
-              className="absolute top-5 right-5 p-2 rounded-full border-2 border-ink/30 bg-paper-muted hover:bg-paper-light text-ink"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="space-y-1">
-              <span className="px-3 py-0.5 bg-highlighter border border-ink text-ink font-mono text-[10px] font-extrabold uppercase rounded-full shadow-solid-xs">
-                Admin Course Creator
-              </span>
-              <h2 className="text-2xl font-extrabold text-ink">Create New Course</h2>
-              <p className="text-xs text-graphite font-bold">Add a structured handwritten course to the platform catalog.</p>
-            </div>
-
-            <form onSubmit={handleCreateCourse} className="space-y-3.5 text-xs font-bold text-ink">
-              <div className="space-y-1">
-                <label className="block">Course Title *</label>
-                <input
-                  type="text"
-                  value={newCourseTitle}
-                  onChange={(e) => setNewCourseTitle(e.target.value)}
-                  placeholder="e.g. C Programming for HSC ICT Board Exam"
-                  className="w-full px-3 py-2.5 bg-white border-2 border-ink/30 rounded-xl"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="block">Subtitle / Description</label>
-                <input
-                  type="text"
-                  value={newCourseSubtitle}
-                  onChange={(e) => setNewCourseSubtitle(e.target.value)}
-                  placeholder="e.g. Master loops, arrays and pointer syntax on paper."
-                  className="w-full px-3 py-2.5 bg-white border-2 border-ink/30 rounded-xl"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="block">Programming Language</label>
-                  <select
-                    value={newCourseLanguage}
-                    onChange={(e: any) => setNewCourseLanguage(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-white border-2 border-ink/30 rounded-xl"
-                  >
-                    <option value="python">Python</option>
-                    <option value="c">C Language</option>
-                    <option value="cpp">C++</option>
-                    <option value="javascript">JavaScript</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block">Category</label>
-                  <select
-                    value={newCourseCategory}
-                    onChange={(e) => setNewCourseCategory(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-white border-2 border-ink/30 rounded-xl"
-                  >
-                    <option value="NCTB Curriculum">NCTB Curriculum</option>
-                    <option value="Olympiad Prep">Olympiad Prep</option>
-                    <option value="Competitive Programming">Competitive Programming</option>
-                    <option value="University CS">University CS</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="block">Difficulty Level</label>
-                  <select
-                    value={newCourseLevel}
-                    onChange={(e: any) => setNewCourseLevel(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-white border-2 border-ink/30 rounded-xl"
-                  >
-                    <option value="Beginner">Beginner</option>
-                    <option value="Intermediate">Intermediate</option>
-                    <option value="Advanced">Advanced</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block">Estimated Hours</label>
-                  <input
-                    type="number"
-                    value={newCourseHours}
-                    onChange={(e) => setNewCourseHours(Number(e.target.value))}
-                    min={1}
-                    max={100}
-                    className="w-full px-3 py-2.5 bg-white border-2 border-ink/30 rounded-xl"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-3 flex gap-2">
-                <PillButton type="button" variant="secondary" size="md" onClick={() => setIsCreatingCourse(false)}>
-                  Cancel
-                </PillButton>
-                <PillButton type="submit" variant="highlighter" size="md" className="flex-1 btn-bounce shadow-solid-xs">
-                  Create Course ➔
-                </PillButton>
-              </div>
-            </form>
-          </div>
         </div>
       )}
 

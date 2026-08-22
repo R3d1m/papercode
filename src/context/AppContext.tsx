@@ -58,6 +58,7 @@ interface AppContextType {
   updateCourse: (courseId: string, data: Partial<Course>) => void;
   deleteCourse: (courseId: string) => void;
   addModuleToCourse: (courseId: string, moduleData: any) => void;
+  deleteModule: (courseId: string, moduleId: string) => void;
   updateLesson: (courseId: string, moduleId: string, lessonId: string, updatedLesson: Lesson) => void;
   deleteLesson: (courseId: string, moduleId: string, lessonId: string) => void;
   publishRoadmap: (roadmapId: string) => void;
@@ -457,8 +458,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
-  const createClassroom = (name: string, gradeLevel: string, subject: string, courseIds: string[] = ['crs-py-basics']) => {
-    const randomCode = 'CUET-' + Math.floor(100 + Math.random() * 900);
+  const createClassroom = (name: string, gradeLevel: string, subject: string, courseIds: string[] = ['crs-py-101']) => {
+    const randomCode = 'PC-' + Math.floor(1000 + Math.random() * 9000);
+    const effectiveCourseIds = courseIds.length > 0 ? courseIds : ['crs-py-101'];
     const newClassroom: Classroom = {
       id: 'cls-' + Date.now(),
       name,
@@ -470,10 +472,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       archived: false,
       roster: [],
       assignments: [],
-      courseIds: courseIds.length > 0 ? courseIds : ['crs-py-basics']
+      courseIds: effectiveCourseIds
     };
 
-    apiClient.createClassroom({ name, subject, grade: gradeLevel, teacherId: currentUser.id, courseIds });
+    apiClient.createClassroom({
+      name,
+      subject,
+      grade: gradeLevel,
+      teacherId: currentUser.id,
+      courseIds: effectiveCourseIds,
+      joinCode: randomCode
+    }).then(res => {
+      if (res && res.classroom) {
+        setClassrooms(prev => prev.map(c => c.id === newClassroom.id ? { ...c, ...res.classroom } : c));
+      }
+    }).catch(() => {});
+
     setClassrooms(prev => [newClassroom, ...prev]);
     return newClassroom;
   };
@@ -483,6 +497,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateClassroomCourses = (classroomId: string, courseIds: string[]) => {
+    apiClient.updateClassroomCourses(classroomId, courseIds).catch(() => {});
     setClassrooms(prev => prev.map(c => c.id === classroomId ? { ...c, courseIds } : c));
   };
 
@@ -635,16 +650,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
   };
 
+  const deleteModule = (courseId: string, moduleId: string) => {
+    apiClient.deleteModule(courseId, moduleId).catch(() => {});
+    setCourses(prev => prev.map(c => {
+      if (c.id === courseId) {
+        return {
+          ...c,
+          modules: (c.modules || []).filter(m => m.id !== moduleId)
+        };
+      }
+      return c;
+    }));
+  };
+
   const updateLesson = (courseId: string, moduleId: string, lessonId: string, updatedLesson: Lesson) => {
     apiClient.createLesson(courseId, moduleId, {
       id: updatedLesson.id,
       title: updatedLesson.title,
       subtitle: updatedLesson.subtitle,
-      theoryHtml: updatedLesson.theoryContent || (updatedLesson as any).theoryHtml || '',
+      theoryHtml: updatedLesson.theoryContent || (updatedLesson as any).theoryHtml || (updatedLesson.blocks?.find(b => b.type === 'theory') as any)?.htmlContent || '',
       exercise: updatedLesson.exercise,
       mcq: updatedLesson.mcq,
+      blocks: updatedLesson.blocks || [],
+      durationMinutes: updatedLesson.durationMinutes || 20,
       xpReward: updatedLesson.xpReward || 100
-    });
+    }).catch(() => {});
+
     setCourses(prev => prev.map(course => {
       if (course.id === courseId) {
         return {
@@ -673,6 +704,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteLesson = (courseId: string, moduleId: string, lessonId: string) => {
+    apiClient.deleteLesson(courseId, moduleId, lessonId).catch(() => {});
     setCourses(prev => prev.map(course => {
       if (course.id === courseId) {
         return {
@@ -793,6 +825,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateCourse,
       deleteCourse,
       addModuleToCourse,
+      deleteModule,
       updateLesson,
       deleteLesson,
       publishRoadmap,

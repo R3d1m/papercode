@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { config } from './config';
+import { seedDatabase } from './db/seed';
 import authRoutes from './routes/auth';
 import ocrRoutes from './routes/ocr';
 import sandboxRoutes from './routes/sandbox';
@@ -35,10 +36,15 @@ app.use('/api/submissions', submissionsRoutes);
 app.use('/api/blogs', blogsRoutes);
 app.use('/api/admin', adminRoutes);
 
-app.listen(config.port, '0.0.0.0', () => {
-  console.log('=================================================================');
-  console.log('🚀 PaperCode Backend Server is running on http://localhost:' + config.port);
-  console.log('⚡ Gemini 2.0 Flash OCR: ' + (config.gemini.apiKey ? 'Configured' : 'Using Local AST Fallback (Add GEMINI_API_KEY in .env)'));
-  console.log('⚡ Server Sandbox Runner: ' + config.judge0.apiUrl);
-  console.log('=================================================================');
+// Initialize Database & Start Server
+seedDatabase().then(() => {
+  app.listen(config.port, '0.0.0.0', () => {
+    console.log('=================================================================');
+    console.log('🚀 PaperCode Backend Server is running on http://localhost:' + config.port);
+    console.log('⚡ Gemini 2.0 Flash OCR: ' + (config.gemini.apiKey ? 'Configured' : 'Using Local AST Fallback (Add GEMINI_API_KEY in .env)'));
+    console.log('⚡ Server Sandbox Runner: ' + config.judge0.apiUrl);
+    console.log('=================================================================');
+  });
+}).catch(err => {
+  console.error('Server startup error:', err);
 });

@@ -122,7 +122,7 @@ export const TopNav: React.FC<TopNavProps> = ({
     if (activeMode === 'admin') {
       return [
         { label: 'Platform Vitals', action: () => { setMobileMenuOpen(false); setCurrentView('admin_vitals'); }, active: currentView === 'admin_vitals' || currentView === 'admin_dashboard' },
-        { label: 'Courses CMS', action: () => { setMobileMenuOpen(false); setCurrentView('admin_courses'); }, active: currentView === 'admin_courses' },
+        { label: 'Courses CMS', action: () => { setMobileMenuOpen(false); setCurrentView('admin_courses'); }, active: currentView === 'admin_courses' || currentView === 'teacher_builder' },
         { label: 'Roadmaps CMS', action: () => { setMobileMenuOpen(false); setCurrentView('admin_roadmaps'); }, active: currentView === 'admin_roadmaps' },
         { label: 'Blogs CMS', action: () => { setMobileMenuOpen(false); setCurrentView('admin_blogs'); }, active: currentView === 'admin_blogs' },
         { label: 'Moderators', action: () => { setMobileMenuOpen(false); setCurrentView('admin_moderators'); }, active: currentView === 'admin_moderators' },
@@ -138,13 +138,17 @@ export const TopNav: React.FC<TopNavProps> = ({
     <header className="sticky top-0 z-40 bg-paper/95 backdrop-blur-md border-b-2 border-ink shadow-solid-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         
-        {/* LEFT: BRAND LOGO (CLICK TO RETURN HOME) */}
+        {/* LEFT: BRAND LOGO (CLICK TO RETURN TO DASHBOARD) */}
         <div 
           onClick={() => {
-            if (activeMode === 'marketing') {
-              setCurrentView('hero');
+            if (activeMode === 'student') {
+              setCurrentView('student_dashboard');
+            } else if (activeMode === 'teacher') {
+              setCurrentView('teacher_classrooms');
+            } else if (activeMode === 'admin') {
+              setCurrentView('admin_vitals');
             } else {
-              handleRoleChange('marketing');
+              setCurrentView('hero');
             }
           }}
           className="flex items-center space-x-2.5 cursor-pointer select-none group flex-shrink-0"

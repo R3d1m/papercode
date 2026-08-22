@@ -83,30 +83,18 @@ router.post('/login', async (req: Request, res: Response) => {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    // 1. Check System Admin login with password
-    if (normalizedEmail === ADMIN_CREDENTIALS.email.toLowerCase() || normalizedEmail === 'admin@papercode.org') {
-      if (password && password !== ADMIN_CREDENTIALS.password) {
-        return res.status(401).json({ success: false, message: 'Invalid Admin password. Access denied.' });
-      }
-
-      const adminUser = {
-        id: 'usr-admin-hq-01',
-        name: ADMIN_CREDENTIALS.name,
-        email: ADMIN_CREDENTIALS.email,
-        role: 'admin',
-        school: ADMIN_CREDENTIALS.school,
-        division: ADMIN_CREDENTIALS.division,
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-        xp: 35000,
-        streak: 120,
-        permissions: ['all_access', 'manage_moderators', 'edit_roadmaps', 'create_courses', 'manage_lessons'],
-        token: 'jwt_admin_token_' + Date.now()
-      };
-      return res.json({ success: true, message: 'Welcome to Admin HQ!', user: adminUser });
+    // Query Neon PostgreSQL users table
+    let result = await pool.query('SELECT * FROM users WHERE LOWER(email) = $1', [normalizedEmail]);
+    
+    // Auto-seed admin if logging in as admin for first time
+    if (result.rows.length === 0 && (normalizedEmail === 'admin@papercode.edu.bd' || normalizedEmail === 'admin@papercode.org')) {
+      await pool.query(`
+        INSERT INTO users (id, name, email, password_hash, role, school, division, avatar_url, xp_points, streak_days)
+        VALUES ('usr-admin-hq-01', 'Dr. Rafiqul Islam (Admin HQ)', $1, 'Admin@PaperCode2026', 'admin', 'PaperCode Central Operations & CUET Lab', 'Chittagong', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150', 35000, 120)
+        ON CONFLICT (email) DO NOTHING
+      `, [normalizedEmail]);
+      result = await pool.query('SELECT * FROM users WHERE LOWER(email) = $1', [normalizedEmail]);
     }
-
-    // 2. Query Neon PostgreSQL users table
-    const result = await pool.query('SELECT * FROM users WHERE LOWER(email) = $1', [normalizedEmail]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({ 
