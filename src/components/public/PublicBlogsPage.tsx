@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { BlogPost, BlogComment } from '../../types';
 import { BentoCard } from '../common/BentoCard';
 import { PillButton } from '../common/PillButton';
+import { UserAvatar } from '../common/UserAvatar';
 import { 
   BookOpen, 
   PenTool, 
@@ -152,7 +153,7 @@ export const PublicBlogsPage: React.FC<PublicBlogsPageProps> = ({ onOpenAuth }) 
         author: {
           name: newAuthorName.trim() || currentUser?.name || 'Author',
           role: editingPost.author?.role || (currentUser.role === 'teacher' ? 'Educator' : (currentUser.role === 'admin' ? 'Editorial Lead' : 'Student Contributor')),
-          avatar: editingPost.author?.avatar || currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+          avatar: editingPost.author?.avatar || currentUser?.avatar || undefined,
           affiliation: newAffiliation.trim() || currentUser.school || 'PaperCode'
         },
         readTime: readTimeCalc,
@@ -178,7 +179,7 @@ export const PublicBlogsPage: React.FC<PublicBlogsPageProps> = ({ onOpenAuth }) 
         author: {
           name: newAuthorName.trim() || currentUser?.name || 'Community Author',
           role: currentUser.role === 'teacher' ? 'Teacher & Contributor' : (currentUser.role === 'admin' ? 'Platform Editorial' : 'Student Developer'),
-          avatar: currentUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+          avatar: currentUser?.avatar || null,
           affiliation: newAffiliation.trim() || currentUser?.school || 'PaperCode Community'
         },
         readTime: readTimeCalc,
@@ -220,7 +221,7 @@ export const PublicBlogsPage: React.FC<PublicBlogsPageProps> = ({ onOpenAuth }) 
       id: 'cmt-' + Date.now(),
       authorId: currentUser.id,
       authorName: currentUser.name,
-      authorAvatar: currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      authorAvatar: currentUser.avatar || undefined,
       authorRole: currentUser.role === 'teacher' ? 'Teacher' : (currentUser.role === 'admin' ? 'Admin' : 'Student'),
       text: commentText.trim(),
       createdAt: 'Just now'
@@ -387,10 +388,11 @@ export const PublicBlogsPage: React.FC<PublicBlogsPageProps> = ({ onOpenAuth }) 
               {/* Author Info & Reaction Bar */}
               <div className="pt-3 border-t border-ink/15 flex items-center justify-between gap-2">
                 <div className="flex items-center space-x-2 min-w-0">
-                  <img
-                    src={post.author?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
-                    alt={post.author?.name || 'Author'}
-                    className="w-7 h-7 rounded-full border border-ink object-cover flex-shrink-0"
+                  <UserAvatar
+                    name={post.author?.name || 'Author'}
+                    avatar={post.author?.avatar}
+                    size="xs"
+                    className="w-7 h-7 flex-shrink-0 text-[10px]"
                   />
                   <div className="overflow-hidden">
                     <strong className="text-ink text-xs block leading-none truncate max-w-[110px]">{post.author?.name}</strong>
@@ -510,10 +512,11 @@ export const PublicBlogsPage: React.FC<PublicBlogsPageProps> = ({ onOpenAuth }) 
             {/* Author Profile Card & Multi-Emoji Reaction Toolbar */}
             <div className="p-4 bg-paper-muted rounded-2xl border-2 border-ink/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center space-x-3">
-                <img
-                  src={selectedPost.author?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
-                  alt={selectedPost.author?.name || 'Author'}
-                  className="w-12 h-12 rounded-full border-2 border-ink object-cover"
+                <UserAvatar
+                  name={selectedPost.author?.name || 'Author'}
+                  avatar={selectedPost.author?.avatar}
+                  size="lg"
+                  className="w-12 h-12 text-lg"
                 />
                 <div>
                   <strong className="text-sm text-ink block">{selectedPost.author?.name}</strong>
@@ -601,10 +604,11 @@ export const PublicBlogsPage: React.FC<PublicBlogsPageProps> = ({ onOpenAuth }) 
               {/* Add Comment Form */}
               <form onSubmit={handleAddComment} className="space-y-3 p-4 bg-paper-light border-2 border-ink rounded-2xl">
                 <div className="flex items-center space-x-2">
-                  <img
-                    src={currentUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
-                    alt={currentUser?.name || 'You'}
-                    className="w-7 h-7 rounded-full border border-ink object-cover"
+                  <UserAvatar
+                    name={currentUser?.name || 'Guest'}
+                    avatar={currentUser?.avatar}
+                    size="xs"
+                    className="w-7 h-7 flex-shrink-0 text-[10px]"
                   />
                   <span className="text-xs font-bold text-ink">{currentUser?.name || 'Guest'}</span>
                   <span className="text-[10px] font-mono text-stamp font-extrabold uppercase">({currentUser?.role || 'Student'})</span>
@@ -640,10 +644,11 @@ export const PublicBlogsPage: React.FC<PublicBlogsPageProps> = ({ onOpenAuth }) 
                     <div key={cmt.id} className="p-3.5 bg-white border border-ink/30 rounded-xl space-y-1.5 relative group">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          <img
-                            src={cmt.authorAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
-                            alt={cmt.authorName}
-                            className="w-6 h-6 rounded-full border border-ink object-cover"
+                          <UserAvatar
+                            name={cmt.authorName || 'Member'}
+                            avatar={cmt.authorAvatar}
+                            size="xs"
+                            className="w-6 h-6 flex-shrink-0 text-[9px]"
                           />
                           <span className="text-xs font-extrabold text-ink">{cmt.authorName}</span>
                           <span className="px-2 py-0.2 bg-highlighter/50 border border-ink/30 rounded-full text-[9px] font-mono font-bold text-ink">

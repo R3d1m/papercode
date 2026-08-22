@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { BentoCard } from '../common/BentoCard';
 import { PillButton } from '../common/PillButton';
+import { UserAvatar } from '../common/UserAvatar';
 import { SubmissionReviewModal } from './SubmissionReviewModal';
 import { Submission, Classroom } from '../../types';
 import { 
@@ -244,7 +245,7 @@ export const BatchGradingView: React.FC = () => {
                     {/* Student */}
                     <td className="p-4">
                       <div className="flex items-center space-x-3">
-                        <img src={sub.studentAvatar} alt={sub.studentName} className="w-8 h-8 rounded-full border-2 border-ink object-cover" />
+                        <UserAvatar name={sub.studentName} avatar={sub.studentAvatar} size="sm" className="w-8 h-8" />
                         <div>
                           <strong className="text-sm font-extrabold text-ink block">{sub.studentName}</strong>
                           <span className="text-[11px] text-graphite font-bold">{sub.studentSchool}</span>

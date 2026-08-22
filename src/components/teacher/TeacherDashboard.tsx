@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { BentoCard } from '../common/BentoCard';
 import { PillButton } from '../common/PillButton';
+import { UserAvatar } from '../common/UserAvatar';
 import { Classroom } from '../../types';
 import { 
   Users, 
@@ -373,7 +374,7 @@ export const TeacherDashboard: React.FC = () => {
                       {currentRoster.map((student) => (
                         <div key={student.studentId} className="p-3.5 bg-white border-2 border-ink rounded-xl flex items-center justify-between shadow-solid-xs">
                           <div className="flex items-center space-x-3">
-                            <img src={student.avatar} alt={student.name} className="w-9 h-9 rounded-full border-2 border-ink object-cover" />
+                            <UserAvatar name={student.name} avatar={student.avatar} size="sm" className="w-9 h-9" />
                             <div>
                               <strong className="text-xs font-extrabold text-ink block">{student.name}</strong>
                               <span className="text-[10px] text-graphite font-mono block">{student.school || 'Student'} • {student.division || 'Bangladesh'}</span>

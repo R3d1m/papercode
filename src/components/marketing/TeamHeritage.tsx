@@ -1,6 +1,7 @@
 import React from 'react';
 import { BentoCard } from '../common/BentoCard';
 import { BarcodeStub } from '../common/BarcodeStub';
+import { UserAvatar } from '../common/UserAvatar';
 
 export const TeamHeritage: React.FC = () => {
   const founders = [
@@ -8,21 +9,18 @@ export const TeamHeritage: React.FC = () => {
       name: 'Redwan Ahmed',
       role: 'Co-Founder & Tech Lead',
       affiliation: 'CUET CSE Alum',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200',
       bio: 'Competitive programmer and researcher in low-resource OCR and AST compilation pipelines for mobile.'
     },
     {
       name: 'Nusrat Jahan',
       role: 'Co-Founder & Curriculum Lead',
       affiliation: 'CUET EEE & EdTech Researcher',
-      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200',
       bio: 'Specialist in Bangladesh National Curriculum (NCTB) and pedagogical design for rural classrooms.'
     },
     {
       name: 'Dr. Rafiqul Islam',
       role: 'Advisor & Research Director',
       affiliation: 'Senior Faculty, CUET',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200',
       bio: '20+ years researching ICT education accessibility and decentralized digital divide solutions.'
     }
   ];
@@ -46,7 +44,7 @@ export const TeamHeritage: React.FC = () => {
         {founders.map((f, i) => (
           <BentoCard key={i} variant="white" className="space-y-4">
             <div className="flex items-center space-x-3">
-              <img src={f.avatar} alt={f.name} className="w-14 h-14 rounded-full border border-ink object-cover" />
+              <UserAvatar name={f.name} size="lg" className="w-14 h-14 text-xl" />
               <div>
                 <h3 className="font-extrabold text-lg text-ink">{f.name}</h3>
                 <span className="text-xs font-bold text-stamp block">{f.role}</span>

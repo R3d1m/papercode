@@ -252,7 +252,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ onBack }) => {
       exerciseTitle: ex.title,
       studentId: currentUser?.id || 'usr-student-1',
       studentName: currentUser?.name || 'Student',
-      studentAvatar: currentUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      studentAvatar: currentUser?.avatar || '',
       studentSchool: currentUser?.school || 'Independent Learner',
       submissionType: scannedImageUrl ? 'photo' : 'typed',
       handwrittenImageUrl: scannedImageUrl || undefined,

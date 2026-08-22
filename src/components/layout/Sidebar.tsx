@@ -1,6 +1,7 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { PillButton } from '../common/PillButton';
+import { UserAvatar } from '../common/UserAvatar';
 import { 
   Home, 
   BookOpen, 
@@ -174,7 +175,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Active User Quick Card (if logged in) */}
           {activeMode !== 'marketing' && (
             <div className="p-3.5 bg-paper-light border-2 border-ink/20 rounded-2xl flex items-center space-x-3">
-              <img src={currentUser.avatar} alt={currentUser.name} className="w-10 h-10 rounded-full border-2 border-ink object-cover" />
+              <UserAvatar name={currentUser.name} avatar={currentUser.avatar} size="md" className="w-10 h-10" />
               <div className="overflow-hidden">
                 <strong className="text-xs text-ink font-extrabold truncate block">{currentUser.name}</strong>
                 {activeMode === 'student' ? (

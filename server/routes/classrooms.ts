@@ -31,7 +31,7 @@ router.get('/', async (req: Request, res: Response) => {
         studentId: enr.student_id,
         name: enr.name,
         email: enr.email,
-        avatar: enr.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+        avatar: enr.avatar_url || null,
         school: enr.school || 'Student',
         division: enr.division || 'Dhaka',
         completedAssignmentsCount: 0,

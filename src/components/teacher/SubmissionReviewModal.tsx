@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Submission } from '../../types';
 import { PillButton } from '../common/PillButton';
+import { UserAvatar } from '../common/UserAvatar';
 import { X, CheckCircle2, AlertCircle, FileText, Image as ImageIcon, Sparkles, Save, Terminal, Camera, Check } from 'lucide-react';
 
 interface SubmissionReviewModalProps {
@@ -46,7 +47,7 @@ export const SubmissionReviewModal: React.FC<SubmissionReviewModalProps> = ({
         {/* Modal Top Bar */}
         <div className="flex items-center justify-between pb-4 border-b-2 border-ink/20">
           <div className="flex items-center space-x-3">
-            <img src={submission.studentAvatar} alt={submission.studentName} className="w-10 h-10 rounded-full border-2 border-ink object-cover" />
+            <UserAvatar name={submission.studentName} avatar={submission.studentAvatar} size="md" className="w-10 h-10" />
             <div>
               <div className="flex items-center space-x-2">
                 <h3 className="font-extrabold text-lg text-ink">{submission.studentName}</h3>

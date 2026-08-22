@@ -4,6 +4,7 @@ import { BentoCard } from '../common/BentoCard';
 import { PillButton } from '../common/PillButton';
 import { CodeIDE } from '../common/CodeIDE';
 import { HandwrittenScanner } from '../common/HandwrittenScanner';
+import { UserAvatar } from '../common/UserAvatar';
 import { Classroom, ClassroomAssignment, Course, Lesson } from '../../types';
 import { 
   ArrowLeft, 
@@ -75,9 +76,7 @@ export const StudentClassroomDetailView: React.FC<StudentClassroomDetailViewProp
       code: finalCode,
       language: 'python',
       ocrConfidence: inputMode === 'photo' ? 97.8 : undefined,
-      handwrittenImageUrl: inputMode === 'photo'
-        ? 'https://images.unsplash.com/photo-1517842645767-c639042777db?w=600&auto=format&fit=crop&q=80'
-        : undefined,
+      handwrittenImageUrl: undefined,
       executionResult: {
         stdout: 'PASSED',
         stderr: null,
@@ -380,7 +379,7 @@ export const StudentClassroomDetailView: React.FC<StudentClassroomDetailViewProp
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
           {classroom.roster.map((std) => (
             <div key={std.studentId} className="p-3 bg-paper-card border-2 border-ink rounded-2xl text-center space-y-1.5 shadow-solid-xs">
-              <img src={std.avatar} alt={std.name} className="w-10 h-10 rounded-full mx-auto border-2 border-ink object-cover" />
+              <UserAvatar name={std.name} avatar={std.avatar} size="md" className="w-10 h-10 mx-auto" />
               <strong className="text-xs font-extrabold text-ink block truncate">{std.name}</strong>
               <span className="text-[10px] font-mono text-stamp font-bold block">{std.averageScore}% Score</span>
             </div>

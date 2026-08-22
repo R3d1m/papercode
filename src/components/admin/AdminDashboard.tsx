@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { BentoCard } from '../common/BentoCard';
 import { PillButton } from '../common/PillButton';
+import { UserAvatar } from '../common/UserAvatar';
 import { apiClient } from '../../services/apiClient';
 import { BlogPost, Course, Roadmap } from '../../types';
 import { 
@@ -249,7 +250,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ initialTab = 'vi
         author: {
           name: blogAuthorName.trim() || 'Dr. Rafiqul Islam',
           role: blogAuthorRole.trim() || 'Author',
-          avatar: editingBlog.author?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+          avatar: editingBlog.author?.avatar || currentUser.avatar || undefined,
           affiliation: blogAuthorAffiliation.trim() || 'PaperCode Editorial'
         },
         readTime: autoReadTime,
@@ -266,7 +267,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ initialTab = 'vi
         author: {
           name: blogAuthorName.trim() || currentUser.name || 'Dr. Rafiqul Islam (Admin HQ)',
           role: blogAuthorRole.trim() || 'Senior Academic Advisor',
-          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+          avatar: currentUser.avatar || undefined,
           affiliation: blogAuthorAffiliation.trim() || 'PaperCode Editorial HQ'
         },
         readTime: autoReadTime,
@@ -485,7 +486,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ initialTab = 'vi
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-extrabold text-ink flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-stamp" />
-                  <span>Gemini Vision OCR Pipeline</span>
+                  <span>Total Transcriptions</span>
                 </h3>
                 <span className="px-2.5 py-0.5 bg-green-100 text-green-800 border border-green-600 rounded-full font-mono text-[10px] font-extrabold">
                   ONLINE 99.98%
@@ -862,10 +863,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ initialTab = 'vi
               {moderators.map((mod) => (
                 <div key={mod.id} className="p-4 bg-yellow-50/70 border-2 border-ink rounded-2xl shadow-solid-sm flex items-center justify-between gap-4">
                   <div className="flex items-center space-x-3">
-                    <img
-                      src={mod.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
-                      alt={mod.name}
-                      className="w-12 h-12 rounded-full border-2 border-ink object-cover"
+                    <UserAvatar
+                      name={mod.name}
+                      avatar={mod.avatar}
+                      size="lg"
+                      className="w-12 h-12"
                     />
                     <div>
                       <h4 className="text-sm font-extrabold text-ink">{mod.name}</h4>
@@ -910,10 +912,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ initialTab = 'vi
                 return (
                   <div key={teacher.id} className="p-4 bg-white border-2 border-ink rounded-2xl shadow-solid-sm flex flex-col justify-between space-y-3">
                     <div className="flex items-center space-x-3">
-                      <img
-                        src={teacher.avatar || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150'}
-                        alt={teacher.name}
-                        className="w-10 h-10 rounded-full border-2 border-ink object-cover"
+                      <UserAvatar
+                        name={teacher.name}
+                        avatar={teacher.avatar}
+                        size="md"
+                        className="w-10 h-10"
                       />
                       <div className="min-w-0 flex-1">
                         <h4 className="text-sm font-extrabold text-ink truncate">{teacher.name}</h4>
@@ -1502,10 +1505,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ initialTab = 'vi
             {/* Author Card */}
             <div className="p-4 bg-white border-2 border-ink rounded-2xl flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center space-x-3">
-                <img
-                  src={previewBlog.author?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'}
-                  alt={previewBlog.author?.name}
-                  className="w-12 h-12 rounded-full border-2 border-ink object-cover"
+                <UserAvatar
+                  name={previewBlog.author?.name || 'Author'}
+                  avatar={previewBlog.author?.avatar}
+                  size="lg"
+                  className="w-12 h-12"
                 />
                 <div>
                   <h4 className="text-sm font-extrabold text-ink">{previewBlog.author?.name}</h4>

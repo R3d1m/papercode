@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { PillButton } from '../common/PillButton';
+import { UserAvatar } from '../common/UserAvatar';
 import { Role } from '../../types';
 import { 
   Flame, 
@@ -235,10 +236,11 @@ export const TopNav: React.FC<TopNavProps> = ({
                     </span>
                   </div>
 
-                  <img
-                    src={currentUser.avatar}
-                    alt={currentUser.name}
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 border-ink object-cover"
+                  <UserAvatar
+                    name={currentUser.name}
+                    avatar={currentUser.avatar}
+                    size="sm"
+                    className="w-7 h-7 sm:w-8 sm:h-8"
                   />
 
                   <ChevronDown className={'w-3.5 h-3.5 text-ink transition-transform pr-0.5 ' + (dropdownOpen ? 'rotate-180' : '')} />
@@ -250,10 +252,11 @@ export const TopNav: React.FC<TopNavProps> = ({
                     
                     {/* User Header Profile */}
                     <div className="flex items-center space-x-3 pb-3 border-b-2 border-ink/15">
-                      <img
-                        src={currentUser.avatar}
-                        alt={currentUser.name}
-                        className="w-10 h-10 rounded-full border-2 border-ink object-cover"
+                      <UserAvatar
+                        name={currentUser.name}
+                        avatar={currentUser.avatar}
+                        size="md"
+                        className="w-10 h-10"
                       />
                       <div className="overflow-hidden">
                         <strong className="text-sm text-ink font-extrabold truncate block">{currentUser.name}</strong>

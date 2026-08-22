@@ -20,7 +20,7 @@ router.get('/', async (req: Request, res: Response) => {
         author: {
           name: r.author_name,
           role: r.author_role || 'Author',
-          avatar: r.author_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+          avatar: r.author_avatar || null,
           affiliation: r.author_affiliation || 'PaperCode'
         },
         publishedAt: r.published_at ? new Date(r.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Today',
@@ -52,7 +52,7 @@ router.post('/', async (req: Request, res: Response) => {
     const authorName = author?.name || 'PaperCode Contributor';
     const authorRole = author?.role || 'Community Member';
     const authorAffiliation = author?.affiliation || 'PaperCode Community';
-    const authorAvatar = author?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
+    const authorAvatar = author?.avatar || null;
     const cleanTags = Array.isArray(tags) ? tags : ['PaperCode'];
 
     const newBlog = {
@@ -60,7 +60,7 @@ router.post('/', async (req: Request, res: Response) => {
       title: title || 'Untitled Post',
       subtitle: subtitle || '',
       category: category || 'Field Story',
-      coverImage: coverImage || 'https://images.unsplash.com/photo-1577896851231-70ef18881754?w=800&auto=format&fit=crop&q=80',
+      coverImage: coverImage || null,
       authorId: authorId || null,
       author: {
         name: authorName,
@@ -203,7 +203,7 @@ router.post('/:id/comments', async (req: Request, res: Response) => {
       id: 'cmt-' + Date.now(),
       authorId: authorId || 'usr-guest',
       authorName: authorName || 'PaperCode Learner',
-      authorAvatar: authorAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      authorAvatar: authorAvatar || null,
       authorRole: authorRole || 'Student',
       text: text.trim(),
       createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })

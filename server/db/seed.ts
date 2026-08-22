@@ -126,7 +126,10 @@ export async function seedDatabase() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS completed_lessons TEXT[] DEFAULT ARRAY[]::TEXT[];
     `);
 
-    // 2. Seed Admin User in PostgreSQL
+    // 2. Clear any unsplash URLs from existing users in DB
+    await pool.query("UPDATE users SET avatar_url = NULL WHERE avatar_url LIKE '%unsplash.com%'");
+
+    // 3. Seed Admin User in PostgreSQL
     const adminEmail = 'admin@papercode.edu.bd';
     const adminCheck = await pool.query('SELECT id FROM users WHERE email = $1', [adminEmail]);
     if (adminCheck.rows.length === 0) {
@@ -140,7 +143,7 @@ export async function seedDatabase() {
           'admin',
           'PaperCode Central Operations & CUET Lab',
           'Chittagong',
-          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+          NULL,
           35000,
           120
         );
@@ -148,10 +151,10 @@ export async function seedDatabase() {
       console.log('✅ Admin user seeded in PostgreSQL:', adminEmail);
     } else {
       // Ensure role is admin
-      await pool.query("UPDATE users SET role = 'admin', password_hash = 'Admin@PaperCode2026' WHERE email = $1", [adminEmail]);
+      await pool.query("UPDATE users SET role = 'admin', password_hash = 'Admin@PaperCode2026', avatar_url = NULL WHERE email = $1 AND avatar_url LIKE '%unsplash%'", [adminEmail]);
     }
 
-    // 3. Seed Default Teacher in PostgreSQL
+    // 4. Seed Default Teacher in PostgreSQL
     const teacherEmail = 'nusrat.jahan@cuet.ac.bd';
     const teacherCheck = await pool.query('SELECT id FROM users WHERE email = $1', [teacherEmail]);
     if (teacherCheck.rows.length === 0) {
@@ -165,7 +168,7 @@ export async function seedDatabase() {
           'teacher',
           'CUET EdTech Lab & ICT Mentor',
           'Chittagong',
-          'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
+          NULL,
           12400,
           42
         );
@@ -173,7 +176,7 @@ export async function seedDatabase() {
       console.log('✅ Teacher user seeded in PostgreSQL:', teacherEmail);
     }
 
-    // 4. Seed Default Student in PostgreSQL
+    // 5. Seed Default Student in PostgreSQL
     const studentEmail = 'tanvir@collegiate.edu.bd';
     const studentCheck = await pool.query('SELECT id FROM users WHERE email = $1', [studentEmail]);
     if (studentCheck.rows.length === 0) {
@@ -187,7 +190,7 @@ export async function seedDatabase() {
           'student',
           'Chittagong Collegiate School',
           'Chittagong',
-          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+          NULL,
           2850,
           14
         );

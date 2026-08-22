@@ -119,7 +119,7 @@ export const HtmlWriter: React.FC<HtmlWriterProps> = ({ initialHtml, onChange })
           <ImageIcon className="w-4 h-4 text-stamp flex-shrink-0" />
           <input
             type="text"
-            placeholder="Paste Image URL (e.g. https://images.unsplash.com/...)"
+            placeholder="Paste Diagram or Image URL (e.g. https://example.com/diagram.png)"
             value={imageUrlInput}
             onChange={(e) => setImageUrlInput(e.target.value)}
             className="flex-1 p-1.5 border border-ink/30 rounded-lg text-xs"

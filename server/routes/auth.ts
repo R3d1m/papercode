@@ -21,9 +21,7 @@ router.post('/signup', async (req: Request, res: Response) => {
 
     const normalizedEmail = email.trim().toLowerCase();
     const userId = 'usr-' + Date.now();
-    const avatar = role === 'teacher'
-      ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150'
-      : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
+    const avatar = null;
 
     try {
       const existing = await pool.query('SELECT * FROM users WHERE email = $1', [normalizedEmail]);
@@ -90,7 +88,7 @@ router.post('/login', async (req: Request, res: Response) => {
     if (result.rows.length === 0 && (normalizedEmail === 'admin@papercode.edu.bd' || normalizedEmail === 'admin@papercode.org')) {
       await pool.query(`
         INSERT INTO users (id, name, email, password_hash, role, school, division, avatar_url, xp_points, streak_days)
-        VALUES ('usr-admin-hq-01', 'Dr. Rafiqul Islam (Admin HQ)', $1, 'Admin@PaperCode2026', 'admin', 'PaperCode Central Operations & CUET Lab', 'Chittagong', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150', 35000, 120)
+        VALUES ('usr-admin-hq-01', 'Dr. Rafiqul Islam (Admin HQ)', $1, 'Admin@PaperCode2026', 'admin', 'PaperCode Central Operations & CUET Lab', 'Chittagong', NULL, 35000, 120)
         ON CONFLICT (email) DO NOTHING
       `, [normalizedEmail]);
       result = await pool.query('SELECT * FROM users WHERE LOWER(email) = $1', [normalizedEmail]);
@@ -129,9 +127,7 @@ router.post('/login', async (req: Request, res: Response) => {
       role: userRole,
       school: u.school || (userRole === 'teacher' ? 'Educator' : 'Student'),
       division: u.division || 'Dhaka',
-      avatar: u.avatar_url || (userRole === 'teacher' 
-        ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150' 
-        : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'),
+      avatar: u.avatar_url || null,
       xp: u.xp_points || 0,
       streak: u.streak_days || 0,
       enrolledCourseIds: [],
@@ -220,7 +216,7 @@ router.post('/google', async (req: Request, res: Response) => {
         role: 'admin',
         school: ADMIN_CREDENTIALS.school,
         division: ADMIN_CREDENTIALS.division,
-        avatar: googleAvatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+        avatar: googleAvatar || null,
         xp: 35000,
         streak: 120,
         permissions: ['all_access', 'manage_moderators', 'edit_roadmaps', 'create_courses', 'manage_lessons'],
@@ -259,9 +255,7 @@ router.post('/google', async (req: Request, res: Response) => {
         role: userRole,
         school: u.school || (userRole === 'teacher' ? 'Educator' : 'Student'),
         division: u.division || 'Dhaka',
-        avatar: googleAvatar || u.avatar_url || (userRole === 'teacher'
-          ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150'
-          : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'),
+        avatar: googleAvatar || u.avatar_url || null,
         xp: u.xp_points || 0,
         streak: u.streak_days || 0,
         enrolledCourseIds: [],
@@ -280,9 +274,7 @@ router.post('/google', async (req: Request, res: Response) => {
     // New User: Auto-register into PostgreSQL
     const userId = 'usr-' + Date.now();
     const effectiveRole = (role === 'teacher' || role === 'student') ? role : 'student';
-    const effectiveAvatar = googleAvatar || (effectiveRole === 'teacher'
-      ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150'
-      : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150');
+    const effectiveAvatar = googleAvatar || null;
     const effectiveSchool = school?.trim() || (effectiveRole === 'teacher' ? 'Independent Educator / School' : 'Independent Learner');
     const effectiveDivision = division || 'Chittagong';
 

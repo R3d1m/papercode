@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { BentoCard } from '../common/BentoCard';
 import { PillButton } from '../common/PillButton';
+import { UserAvatar, getInitialChar } from '../common/UserAvatar';
 import { 
   User as UserIcon, 
   School, 
@@ -54,15 +55,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onBack }) => {
 
   // Save feedback state
   const [saveSuccess, setSaveSuccess] = useState(false);
-
-  // Avatar presets
-  const avatarPresets = [
-    { label: 'Student Boy', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200' },
-    { label: 'Student Girl', url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200' },
-    { label: 'Teacher Nusrat', url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200' },
-    { label: 'Professor Rafiq', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200' },
-    { label: 'Lead Coder', url: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200' }
-  ];
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,10 +150,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onBack }) => {
             
             {/* Avatar Preview with Badge */}
             <div className="relative inline-block mx-auto">
-              <img
-                src={avatar}
-                alt={name}
-                className="w-28 h-28 rounded-full border-3 border-ink object-cover shadow-solid-sm mx-auto"
+              <UserAvatar
+                name={name}
+                avatar={avatar}
+                size="3xl"
+                className="w-28 h-28 text-4xl shadow-solid-sm mx-auto"
               />
               <div className="absolute bottom-0 right-0 p-1.5 bg-highlighter border-2 border-ink rounded-full text-ink shadow-solid-xs">
                 <Sparkles className="w-4 h-4 text-stamp" />
@@ -177,24 +170,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ onBack }) => {
               </div>
             </div>
 
-            {/* Quick Avatar Selector */}
-            <div className="pt-3 border-t border-ink/15 text-left space-y-2">
-              <span className="text-[11px] font-mono font-bold text-graphite uppercase block">
-                Choose Avatar Preset:
-              </span>
-              <div className="flex items-center justify-center gap-2 flex-wrap">
-                {avatarPresets.map((preset, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setAvatar(preset.url)}
-                    className={'w-9 h-9 rounded-full border-2 transition-transform hover:scale-110 ' + (avatar === preset.url ? 'border-stamp ring-2 ring-highlighter' : 'border-ink/40')}
-                    title={preset.label}
-                  >
-                    <img src={preset.url} alt={preset.label} className="w-full h-full rounded-full object-cover" />
-                  </button>
-                ))}
+            {/* Google Style Initial Avatar Info */}
+            <div className="p-3 bg-paper-muted rounded-xl border border-ink/15 text-xs text-graphite text-left space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-ink text-[11px] uppercase font-mono">
+                <span>Google Account Initial Avatar</span>
               </div>
+              <p className="text-[11px] leading-relaxed">
+                Your profile picture is dynamically styled with your initial character <strong className="text-ink font-bold font-mono">({getInitialChar(name)})</strong> matching Google Workspace standards.
+              </p>
             </div>
 
             {/* Gamification Stats (Student) */}
