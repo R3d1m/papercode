@@ -1,5 +1,20 @@
 import { User, Course, Roadmap, Classroom, Submission, InstitutionalAccount, BlogPost } from '../types';
 
+export const GUEST_USER: User = {
+  id: 'usr-guest',
+  name: 'Guest Learner',
+  email: '',
+  role: 'student',
+  avatar: '',
+  school: 'Independent Learner',
+  division: 'Chittagong',
+  xp: 0,
+  streak: 0,
+  completedLessons: [],
+  enrolledClassroomIds: [],
+  enrolledRoadmapIds: []
+};
+
 export const CURRENT_STUDENT: User = {
   id: 'usr-std-001',
   name: 'Tanvir Hossain',

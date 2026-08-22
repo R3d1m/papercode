@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { PillButton } from '../common/PillButton';
 import { 
@@ -50,6 +51,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   initialTab = 'login'
 }) => {
   const { login, signup, loginWithGoogle } = useApp();
+  const navigate = useNavigate();
   
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>(
     initialTab === 'signup' ? 'signup' : 'signin'
@@ -68,6 +70,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [statusMessage, setStatusMessage] = useState<{ success?: boolean; message?: string } | null>(null);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
+  const redirectAfterAuth = (userRole?: string) => {
+    if (userRole === 'teacher') {
+      navigate('/teacher/courses');
+    } else if (userRole === 'admin') {
+      navigate('/admin/vitals');
+    } else if (userRole === 'moderator') {
+      navigate('/moderator/roadmaps');
+    } else {
+      navigate('/student/dashboard');
+    }
+  };
+
   if (!isOpen) return null;
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -82,7 +96,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setTimeout(() => {
         onClose();
         setStatusMessage(null);
-      }, 800);
+        redirectAfterAuth(res.user?.role);
+      }, 700);
     }
   };
 
@@ -106,7 +121,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setTimeout(() => {
         onClose();
         setStatusMessage(null);
-      }, 1000);
+        redirectAfterAuth(res.user?.role || selectedRole);
+      }, 700);
     }
   };
 
@@ -173,7 +189,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 setTimeout(() => {
                   onClose();
                   setStatusMessage(null);
-                }, 900);
+                  redirectAfterAuth(res.user?.role || selectedRole);
+                }, 700);
               }
             }
           },

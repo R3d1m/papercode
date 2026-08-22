@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { PillButton } from '../common/PillButton';
 import { UserAvatar } from '../common/UserAvatar';
@@ -10,7 +11,7 @@ import {
   LogOut, 
   KeyRound, 
   Settings, 
-  User as UserIcon,
+  User as UserIcon, 
   ShieldCheck, 
   Sparkles, 
   LogIn, 
@@ -22,15 +23,11 @@ import {
 } from 'lucide-react';
 
 interface TopNavProps {
-  currentView: string;
-  setCurrentView: (view: string) => void;
   onOpenAuth: (tab: 'login' | 'signup') => void;
   onOpenJoinModal: () => void;
 }
 
 export const TopNav: React.FC<TopNavProps> = ({
-  currentView,
-  setCurrentView,
   onOpenAuth,
   onOpenJoinModal
 }) => {
@@ -43,6 +40,9 @@ export const TopNav: React.FC<TopNavProps> = ({
     studentXp, 
     studentStreak 
   } = useApp();
+
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -64,73 +64,74 @@ export const TopNav: React.FC<TopNavProps> = ({
     setMobileMenuOpen(false);
     if (role === 'marketing') {
       setActiveMode('marketing');
-      setCurrentView('hero');
+      navigate('/');
     } else {
       switchRole(role);
-      if (role === 'student') setCurrentView('student_dashboard');
-      if (role === 'teacher') setCurrentView('teacher_builder');
-      if (role === 'moderator') setCurrentView('admin_cms');
-      if (role === 'admin') setCurrentView('admin_vitals');
+      if (role === 'student') navigate('/student/dashboard');
+      if (role === 'teacher') navigate('/teacher/courses');
+      if (role === 'moderator') navigate('/moderator/roadmaps');
+      if (role === 'admin') navigate('/admin/vitals');
     }
   };
 
   const handleOpenProfile = () => {
     setDropdownOpen(false);
     setMobileMenuOpen(false);
-    setCurrentView('profile');
+    navigate('/profile');
   };
 
   // Define ONE-WORD navigation links per role (Roadmaps, Courses, Pricing, Blogs)
   const getNavLinks = () => {
+    const currentPath = location.pathname;
+
     if (activeMode === 'marketing') {
       return [
-        { label: 'Roadmaps', action: () => { setMobileMenuOpen(false); setCurrentView('public_roadmaps'); }, active: currentView === 'public_roadmaps' },
-        { label: 'Courses', action: () => { setMobileMenuOpen(false); setCurrentView('public_courses'); }, active: currentView === 'public_courses' },
-        // { label: 'Code Runner', action: () => { setMobileMenuOpen(false); setCurrentView('public_playground'); }, active: currentView === 'public_playground' },
-        { label: 'Pricing', action: () => { setMobileMenuOpen(false); setCurrentView('public_pricing'); }, active: currentView === 'public_pricing' },
-        { label: 'Blogs', action: () => { setMobileMenuOpen(false); setCurrentView('public_blogs'); }, active: currentView === 'public_blogs' },
+        { label: 'Roadmaps', path: '/roadmaps', active: currentPath === '/roadmaps' },
+        { label: 'Courses', path: '/courses', active: currentPath.startsWith('/courses') },
+        { label: 'Pricing', path: '/pricing', active: currentPath === '/pricing' },
+        { label: 'Blogs', path: '/blogs', active: currentPath.startsWith('/blogs') },
       ];
     }
 
     if (activeMode === 'student') {
       return [
-        { label: 'Dashboard', action: () => { setMobileMenuOpen(false); setCurrentView('student_dashboard'); }, active: currentView === 'student_dashboard' },
-        { label: 'Classrooms', action: () => { setMobileMenuOpen(false); setCurrentView('student_classrooms'); }, active: currentView === 'student_classrooms' || currentView === 'student_classroom_detail' },
-        { label: 'Roadmaps', action: () => { setMobileMenuOpen(false); setCurrentView('student_roadmaps'); }, active: currentView === 'student_roadmaps' },
-        { label: 'Code Runner', action: () => { setMobileMenuOpen(false); setCurrentView('public_playground'); }, active: currentView === 'public_playground' },
-        { label: 'Blogs', action: () => { setMobileMenuOpen(false); setCurrentView('public_blogs'); }, active: currentView === 'public_blogs' },
+        { label: 'Dashboard', path: '/student/dashboard', active: currentPath === '/student' || currentPath === '/student/dashboard' },
+        { label: 'Classrooms', path: '/student/classrooms', active: currentPath.startsWith('/student/classrooms') },
+        { label: 'Roadmaps', path: '/student/roadmaps', active: currentPath === '/student/roadmaps' },
+        { label: 'Code Runner', path: '/playground', active: currentPath === '/playground' },
+        { label: 'Blogs', path: '/blogs', active: currentPath.startsWith('/blogs') },
       ];
     }
 
     if (activeMode === 'teacher') {
       return [
-        { label: 'Curriculum', action: () => { setMobileMenuOpen(false); setCurrentView('teacher_builder'); }, active: currentView === 'teacher_builder' },
-        { label: 'Gradebook', action: () => { setMobileMenuOpen(false); setCurrentView('teacher_gradebook'); }, active: currentView === 'teacher_gradebook' },
-        { label: 'Classrooms', action: () => { setMobileMenuOpen(false); setCurrentView('teacher_classrooms'); }, active: currentView === 'teacher_classrooms' },
-        { label: 'Analytics', action: () => { setMobileMenuOpen(false); setCurrentView('teacher_analytics'); }, active: currentView === 'teacher_analytics' },
-        { label: 'Code Runner', action: () => { setMobileMenuOpen(false); setCurrentView('public_playground'); }, active: currentView === 'public_playground' },
-        { label: 'Blogs', action: () => { setMobileMenuOpen(false); setCurrentView('public_blogs'); }, active: currentView === 'public_blogs' },
+        { label: 'Curriculum', path: '/teacher/courses', active: currentPath.startsWith('/teacher/courses') || currentPath === '/teacher' },
+        { label: 'Gradebook', path: '/teacher/grading', active: currentPath.startsWith('/teacher/grading') || currentPath.startsWith('/teacher/gradebook') },
+        { label: 'Classrooms', path: '/teacher/classrooms', active: currentPath.startsWith('/teacher/classrooms') },
+        { label: 'Analytics', path: '/teacher/analytics', active: currentPath === '/teacher/analytics' },
+        { label: 'Code Runner', path: '/playground', active: currentPath === '/playground' },
+        { label: 'Blogs', path: '/blogs', active: currentPath.startsWith('/blogs') },
       ];
     }
 
     if (activeMode === 'moderator') {
       return [
-        { label: 'Roadmaps & CMS', action: () => { setMobileMenuOpen(false); setCurrentView('admin_cms'); }, active: currentView === 'admin_cms' },
-        { label: 'Curriculum', action: () => { setMobileMenuOpen(false); setCurrentView('teacher_builder'); }, active: currentView === 'teacher_builder' },
-        { label: 'Gradebook', action: () => { setMobileMenuOpen(false); setCurrentView('teacher_gradebook'); }, active: currentView === 'teacher_gradebook' },
-        { label: 'Classrooms', action: () => { setMobileMenuOpen(false); setCurrentView('teacher_classrooms'); }, active: currentView === 'teacher_classrooms' },
-        { label: 'Code Runner', action: () => { setMobileMenuOpen(false); setCurrentView('public_playground'); }, active: currentView === 'public_playground' },
-        { label: 'Blogs', action: () => { setMobileMenuOpen(false); setCurrentView('public_blogs'); }, active: currentView === 'public_blogs' },
+        { label: 'Roadmaps & CMS', path: '/moderator/roadmaps', active: currentPath.startsWith('/moderator') },
+        { label: 'Curriculum', path: '/teacher/courses', active: currentPath.startsWith('/teacher/courses') },
+        { label: 'Gradebook', path: '/teacher/grading', active: currentPath.startsWith('/teacher/grading') },
+        { label: 'Classrooms', path: '/teacher/classrooms', active: currentPath.startsWith('/teacher/classrooms') },
+        { label: 'Code Runner', path: '/playground', active: currentPath === '/playground' },
+        { label: 'Blogs', path: '/blogs', active: currentPath.startsWith('/blogs') },
       ];
     }
 
     if (activeMode === 'admin') {
       return [
-        { label: 'Platform Vitals', action: () => { setMobileMenuOpen(false); setCurrentView('admin_vitals'); }, active: currentView === 'admin_vitals' || currentView === 'admin_dashboard' },
-        { label: 'Courses CMS', action: () => { setMobileMenuOpen(false); setCurrentView('admin_courses'); }, active: currentView === 'admin_courses' || currentView === 'teacher_builder' },
-        { label: 'Roadmaps CMS', action: () => { setMobileMenuOpen(false); setCurrentView('admin_roadmaps'); }, active: currentView === 'admin_roadmaps' },
-        { label: 'Blogs CMS', action: () => { setMobileMenuOpen(false); setCurrentView('admin_blogs'); }, active: currentView === 'admin_blogs' },
-        { label: 'Moderators', action: () => { setMobileMenuOpen(false); setCurrentView('admin_moderators'); }, active: currentView === 'admin_moderators' },
+        { label: 'Platform Vitals', path: '/admin/vitals', active: currentPath === '/admin' || currentPath === '/admin/vitals' },
+        { label: 'Courses CMS', path: '/admin/courses', active: currentPath === '/admin/courses' },
+        { label: 'Roadmaps CMS', path: '/admin/roadmaps', active: currentPath === '/admin/roadmaps' },
+        { label: 'Blogs CMS', path: '/admin/blogs', active: currentPath === '/admin/blogs' },
+        { label: 'Moderators', path: '/admin/moderators', active: currentPath === '/admin/moderators' },
       ];
     }
 
@@ -143,17 +144,19 @@ export const TopNav: React.FC<TopNavProps> = ({
     <header className="sticky top-0 z-40 bg-paper/95 backdrop-blur-md border-b-2 border-ink shadow-solid-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         
-        {/* LEFT: BRAND LOGO (CLICK TO RETURN TO DASHBOARD) */}
+        {/* LEFT: BRAND LOGO (CLICK TO RETURN TO DASHBOARD/CURRICULUM/VITALS OR HOME) */}
         <div 
           onClick={() => {
             if (activeMode === 'student') {
-              setCurrentView('student_dashboard');
+              navigate('/student/dashboard');
             } else if (activeMode === 'teacher') {
-              setCurrentView('teacher_classrooms');
+              navigate('/teacher/courses');
             } else if (activeMode === 'admin') {
-              setCurrentView('admin_vitals');
+              navigate('/admin/vitals');
+            } else if (activeMode === 'moderator') {
+              navigate('/moderator/roadmaps');
             } else {
-              setCurrentView('hero');
+              navigate('/');
             }
           }}
           className="flex items-center space-x-2.5 cursor-pointer select-none group flex-shrink-0"
@@ -173,7 +176,7 @@ export const TopNav: React.FC<TopNavProps> = ({
             <button
               key={idx}
               type="button"
-              onClick={link.action}
+              onClick={() => navigate(link.path)}
               className={'px-4 py-1.5 rounded-full text-xs font-extrabold transition-all btn-bounce ' + (link.active ? 'bg-highlighter text-ink border-2 border-ink shadow-solid-xs' : 'text-ink hover:bg-paper-muted border border-transparent')}
             >
               {link.label}
@@ -227,7 +230,7 @@ export const TopNav: React.FC<TopNavProps> = ({
                 <button
                   type="button"
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className={'flex items-center space-x-2 p-1 pl-2 bg-paper-card hover:bg-paper-light border-2 border-ink rounded-full shadow-solid-xs transition-all btn-bounce ' + (currentView === 'profile' ? 'ring-2 ring-stamp bg-highlighter/20' : '')}
+                  className={'flex items-center space-x-2 p-1 pl-2 bg-paper-card hover:bg-paper-light border-2 border-ink rounded-full shadow-solid-xs transition-all btn-bounce ' + (location.pathname === '/profile' ? 'ring-2 ring-stamp bg-highlighter/20' : '')}
                 >
                   <div className="text-left hidden lg:block pr-1">
                     <strong className="text-xs text-ink block leading-none">{currentUser.name}</strong>
@@ -314,7 +317,7 @@ export const TopNav: React.FC<TopNavProps> = ({
                     <div className="pt-2 border-t-2 border-ink/15">
                       <button
                         type="button"
-                        onClick={() => { setDropdownOpen(false); logout(); setCurrentView('hero'); }}
+                        onClick={() => { setDropdownOpen(false); logout(); navigate('/'); }}
                         className="w-full p-2 text-left text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl flex items-center justify-between transition-colors"
                       >
                         <div className="flex items-center space-x-2">
@@ -353,7 +356,7 @@ export const TopNav: React.FC<TopNavProps> = ({
               <button
                 key={idx}
                 type="button"
-                onClick={() => { setMobileMenuOpen(false); link.action(); }}
+                onClick={() => { setMobileMenuOpen(false); navigate(link.path); }}
                 className={'p-2.5 rounded-xl text-center text-xs font-extrabold border-2 ' + (link.active ? 'bg-highlighter text-ink border-ink shadow-solid-xs' : 'bg-paper-light text-ink border-ink/20 hover:border-ink')}
               >
                 {link.label}
@@ -364,7 +367,7 @@ export const TopNav: React.FC<TopNavProps> = ({
           {activeMode !== 'marketing' && (
             <div className="pt-3 border-t border-ink/20 space-y-2 text-xs">
               <button
-                onClick={() => { setMobileMenuOpen(false); setCurrentView('profile'); }}
+                onClick={() => { setMobileMenuOpen(false); navigate('/profile'); }}
                 className="w-full p-2 bg-highlighter text-ink font-extrabold rounded-xl border border-ink text-center flex items-center justify-center gap-2"
               >
                 <UserIcon className="w-4 h-4" />
@@ -376,7 +379,7 @@ export const TopNav: React.FC<TopNavProps> = ({
                   <span>💎 {studentXp} XP</span>
                 </div>
                 <button
-                  onClick={() => { setMobileMenuOpen(false); logout(); setCurrentView('hero'); }}
+                  onClick={() => { setMobileMenuOpen(false); logout(); navigate('/'); }}
                   className="text-red-600 font-bold hover:underline"
                 >
                   Sign Out

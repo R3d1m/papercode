@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Role, User, Classroom, Course, Roadmap, Submission, Lesson, Module, ClassroomAssignment, BlogPost, BlogComment } from '../types';
 import { 
+  GUEST_USER,
   CURRENT_STUDENT, 
   CURRENT_TEACHER, 
   CURRENT_MODERATOR,
@@ -79,6 +80,13 @@ interface AppContextType {
   toggleBlogPublish: (blogId: string) => void;
   updateUserProfile: (data: Partial<User>) => void;
   enrollInCourse: (courseId: string) => void;
+  authModalOpen: boolean;
+  authInitialTab: 'login' | 'signup';
+  openAuthModal: (tab?: 'login' | 'signup') => void;
+  closeAuthModal: () => void;
+  joinModalOpen: boolean;
+  openJoinModal: () => void;
+  closeJoinModal: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -91,7 +99,7 @@ const getSavedUser = (): User => {
       if (parsed && parsed.email) return parsed;
     }
   } catch (e) {}
-  return CURRENT_STUDENT;
+  return GUEST_USER;
 };
 
 const getSavedMode = (): 'marketing' | 'student' | 'teacher' | 'moderator' | 'admin' => {
@@ -99,7 +107,7 @@ const getSavedMode = (): 'marketing' | 'student' | 'teacher' | 'moderator' | 'ad
     const saved = localStorage.getItem('papercode_user_session');
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (parsed && parsed.role) return parsed.role;
+      if (parsed && parsed.role && parsed.email) return parsed.role;
     }
   } catch (e) {}
   return 'marketing';
@@ -153,6 +161,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(SEED_COURSES[0]?.modules?.[0]?.lessons?.[0] || null);
   const [studentXp, setStudentXp] = useState<number>(() => getSavedUser().xp || 0);
   const [studentStreak, setStudentStreak] = useState<number>(() => getSavedUser().streak || 0);
+
+  // Global Auth and Join Class Modal State
+  const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
+  const [authInitialTab, setAuthInitialTab] = useState<'login' | 'signup'>('login');
+  const [joinModalOpen, setJoinModalOpen] = useState<boolean>(false);
+
+  const openAuthModal = (tab: 'login' | 'signup' = 'login') => {
+    setAuthInitialTab(tab);
+    setAuthModalOpen(true);
+  };
+
+  const closeAuthModal = () => setAuthModalOpen(false);
+
+  const openJoinModal = () => {
+    if (activeMode === 'marketing' || !currentUser || currentUser.id === 'usr-guest') {
+      openAuthModal('signup');
+    } else {
+      setJoinModalOpen(true);
+    }
+  };
+
+  const closeJoinModal = () => setJoinModalOpen(false);
 
   // Sync completedLessonIds, roadmaps, and blogs to localStorage
   useEffect(() => {
@@ -438,10 +468,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const logout = () => {
     try {
       localStorage.removeItem('papercode_user_session');
+      localStorage.removeItem('papercode_completed_lessons');
     } catch (e) {}
     setActiveMode('marketing');
     setCurrentRole('student');
-    setCurrentUser(CURRENT_STUDENT);
+    setCurrentUser(GUEST_USER);
+    setCompletedLessonIds([]);
+    setStudentXp(0);
+    setStudentStreak(0);
   };
 
   const enrollInCourse = (courseId: string) => {
@@ -1139,7 +1173,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       deleteBlogComment,
       toggleBlogPublish,
       updateUserProfile,
-      enrollInCourse
+      enrollInCourse,
+      authModalOpen,
+      authInitialTab,
+      openAuthModal,
+      closeAuthModal,
+      joinModalOpen,
+      openJoinModal,
+      closeJoinModal
     }}>
       {children}
     </AppContext.Provider>

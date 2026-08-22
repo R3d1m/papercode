@@ -1,13 +1,20 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useApp } from '../../context/AppContext';
 import { PillButton } from '../common/PillButton';
 import { BentoCard } from '../common/BentoCard';
-import { PenTool, Camera, Cpu, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { PenTool, Camera, Cpu, ArrowRight, CheckCircle2, Play } from 'lucide-react';
 
 interface WriteScanRunFlowProps {
   onOpenAuth?: (tab: 'login' | 'signup') => void;
 }
 
 export const WriteScanRunFlow: React.FC<WriteScanRunFlowProps> = ({ onOpenAuth }) => {
+  const { currentUser, activeMode } = useApp();
+  const navigate = useNavigate();
+
+  const isAuthenticated = currentUser && currentUser.id !== 'usr-guest' && activeMode !== 'marketing' && Boolean(currentUser.email);
+
   const steps = [
     {
       num: '01',
@@ -64,43 +71,52 @@ export const WriteScanRunFlow: React.FC<WriteScanRunFlowProps> = ({ onOpenAuth }
               <span className="text-[11px] font-mono font-bold text-stamp uppercase block">{s.subtitle}</span>
               <p className="text-xs sm:text-sm text-graphite font-medium leading-relaxed">{s.desc}</p>
             </div>
-
-            {/* <div className="pt-3 border-t border-ink/10 flex items-center space-x-1.5 text-xs font-mono font-bold text-green-700">
-              <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-              <span>Tested across 64 districts</span>
-            </div> */}
           </BentoCard>
         ))}
       </div>
 
       {/* Mid-Page Conversion CTA */}
-      {onOpenAuth && (
-        <div className="p-6 bg-highlighter border-2 border-ink rounded-2xl shadow-solid-md flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
-          <div>
-            <h4 className="text-lg font-extrabold text-ink">Ready to try your first handwritten scan?</h4>
-            <p className="text-xs text-ink/80 font-bold">Create your account and jump into interactive lesson 1.1 right away.</p>
-          </div>
-          <div className="flex items-center gap-2">
+      <div className="p-6 bg-highlighter border-2 border-ink rounded-2xl shadow-solid-md flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+        <div>
+          <h4 className="text-lg font-extrabold text-ink">Ready to try your first handwritten scan?</h4>
+          <p className="text-xs text-ink/80 font-bold">Jump into interactive lesson 1.1 right away.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {isAuthenticated ? (
             <PillButton
               variant="primary"
               size="md"
-              onClick={() => onOpenAuth('signup')}
+              onClick={() => navigate(currentUser.role === 'teacher' ? '/teacher/courses' : '/student/dashboard')}
               className="btn-bounce shadow-solid-xs"
-              icon={<ArrowRight className="w-4 h-4" />}
+              icon={<Play className="w-4 h-4" />}
             >
-              Sign Up Free ➔
+              Open {currentUser.role === 'teacher' ? 'Curriculum' : 'Dashboard'} ➔
             </PillButton>
-            <PillButton
-              variant="secondary"
-              size="md"
-              onClick={() => onOpenAuth('login')}
-              className="btn-bounce"
-            >
-              Sign In
-            </PillButton>
-          </div>
+          ) : (
+            onOpenAuth && (
+              <>
+                <PillButton
+                  variant="primary"
+                  size="md"
+                  onClick={() => onOpenAuth('signup')}
+                  className="btn-bounce shadow-solid-xs"
+                  icon={<ArrowRight className="w-4 h-4" />}
+                >
+                  Sign Up Free ➔
+                </PillButton>
+                <PillButton
+                  variant="secondary"
+                  size="md"
+                  onClick={() => onOpenAuth('login')}
+                  className="btn-bounce"
+                >
+                  Sign In
+                </PillButton>
+              </>
+            )
+          )}
         </div>
-      )}
+      </div>
 
     </section>
   );

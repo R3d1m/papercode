@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Sparkles, MapPin, Mail, School, ShieldCheck } from 'lucide-react';
 
 interface FooterProps {
@@ -6,6 +7,13 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
+  const navigate = useNavigate();
+
+  const handleNav = (path: string) => {
+    if (onNavigate) onNavigate(path);
+    navigate(path);
+  };
+
   return (
     <footer className="w-full bg-paper-card border-t-2 border-ink py-12 px-4 sm:px-8 mt-16">
       <div className="max-w-7xl mx-auto space-y-10">
@@ -16,7 +24,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           {/* Brand & Mission Column */}
           <div className="md:col-span-1 space-y-3">
             <div 
-              onClick={() => onNavigate && onNavigate('hero')}
+              onClick={() => handleNav('/')}
               className="flex items-center space-x-2.5 cursor-pointer group inline-flex"
             >
               <div className="w-8 h-8 rounded-xl bg-highlighter border-2 border-ink flex items-center justify-center font-extrabold text-sm text-ink shadow-solid-xs group-hover:rotate-12 transition-transform">
@@ -41,7 +49,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <ul className="space-y-2 text-graphite font-bold">
               <li>
                 <button 
-                  onClick={() => onNavigate && onNavigate('public_roadmaps')}
+                  onClick={() => handleNav('/roadmaps')}
                   className="hover:text-stamp transition-colors text-left"
                 >
                   Learning Roadmaps
@@ -49,7 +57,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               </li>
               <li>
                 <button 
-                  onClick={() => onNavigate && onNavigate('public_courses')}
+                  onClick={() => handleNav('/courses')}
                   className="hover:text-stamp transition-colors text-left"
                 >
                   Interactive Courses
@@ -57,7 +65,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               </li>
               <li>
                 <button 
-                  onClick={() => onNavigate && onNavigate('public_pricing')}
+                  onClick={() => handleNav('/pricing')}
                   className="hover:text-stamp transition-colors text-left"
                 >
                   Pricing & School ROI
@@ -65,7 +73,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               </li>
               <li>
                 <button 
-                  onClick={() => onNavigate && onNavigate('public_blogs')}
+                  onClick={() => handleNav('/blogs')}
                   className="hover:text-stamp transition-colors text-left"
                 >
                   Community Articles & Blogs
