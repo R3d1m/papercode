@@ -10,6 +10,8 @@ import { PublicRoadmapsPage } from './components/public/PublicRoadmapsPage';
 import { PublicCoursesPage } from './components/public/PublicCoursesPage';
 import { PublicPricingPage } from './components/public/PublicPricingPage';
 import { PublicBlogsPage } from './components/public/PublicBlogsPage';
+import { PublicPlaygroundPage } from './components/public/PublicPlaygroundPage';
+import { LivePlaygroundSection } from './components/marketing/LivePlaygroundSection';
 import { AuthModal } from './components/auth/AuthModal';
 import { JoinClassModal } from './components/student/JoinClassModal';
 import { StudentDashboard } from './components/student/StudentDashboard';
@@ -124,7 +126,9 @@ export const App: React.FC = () => {
               {/* 1. PUBLIC MARKETING & DEDICATED PAGES */}
               {activeMode === 'marketing' && (
                 <div>
-                  {currentView === 'public_roadmaps' ? (
+                  {currentView === 'public_playground' ? (
+                    <PublicPlaygroundPage onOpenAuth={handleOpenAuth} />
+                  ) : currentView === 'public_roadmaps' ? (
                     <PublicRoadmapsPage onOpenAuth={handleOpenAuth} />
                   ) : currentView === 'public_courses' ? (
                     <PublicCoursesPage onOpenAuth={handleOpenAuth} />
@@ -137,6 +141,11 @@ export const App: React.FC = () => {
                     <div className="space-y-16">
                       <section id="hero">
                         <HeroNotebook onOpenAuth={handleOpenAuth} />
+                      </section>
+
+                      {/* LIVE SCANNER & CLOUD IDE PLAYGROUND */}
+                      <section id="live-playground">
+                        <LivePlaygroundSection />
                       </section>
 
                       <section id="digital-divide">
@@ -158,7 +167,9 @@ export const App: React.FC = () => {
               {/* 2. STUDENT PORTAL VIEWS */}
               {activeMode === 'student' && (
                 <div>
-                  {currentView === 'public_blogs' ? (
+                  {currentView === 'public_playground' ? (
+                    <PublicPlaygroundPage onOpenAuth={handleOpenAuth} />
+                  ) : currentView === 'public_blogs' ? (
                     <PublicBlogsPage onOpenAuth={handleOpenAuth} />
                   ) : currentView === 'student_lesson' ? (
                     <LessonPlayer onBack={handleBackFromLesson} />
@@ -190,7 +201,9 @@ export const App: React.FC = () => {
               {/* 3. TEACHER PORTAL VIEWS */}
               {activeMode === 'teacher' && (
                 <div>
-                  {currentView === 'public_blogs' ? (
+                  {currentView === 'public_playground' ? (
+                    <PublicPlaygroundPage onOpenAuth={handleOpenAuth} />
+                  ) : currentView === 'public_blogs' ? (
                     <PublicBlogsPage onOpenAuth={handleOpenAuth} />
                   ) : currentView === 'teacher_gradebook' ? (
                     <BatchGradingView />
@@ -207,7 +220,9 @@ export const App: React.FC = () => {
               {/* 4. MODERATOR PORTAL VIEWS */}
               {activeMode === 'moderator' && (
                 <div>
-                  {currentView === 'public_blogs' ? (
+                  {currentView === 'public_playground' ? (
+                    <PublicPlaygroundPage onOpenAuth={handleOpenAuth} />
+                  ) : currentView === 'public_blogs' ? (
                     <PublicBlogsPage onOpenAuth={handleOpenAuth} />
                   ) : currentView === 'teacher_builder' ? (
                     <CourseBuilder />

@@ -1,6 +1,6 @@
 import React from 'react';
 import { PillButton } from '../common/PillButton';
-import { ArrowRight, GraduationCap, Users, LogIn, Sparkles, CheckCircle2 } from 'lucide-react';
+import { GraduationCap, Users, LogIn, Sparkles, CheckCircle2 } from 'lucide-react';
 
 interface HeroNotebookProps {
   onOpenAuth: (tab: 'login' | 'signup') => void;
@@ -11,7 +11,7 @@ export const HeroNotebook: React.FC<HeroNotebookProps> = ({ onOpenAuth }) => {
     <div className="space-y-10 text-center max-w-6xl mx-auto py-8 px-4">
       <div className="inline-flex items-center space-x-2 px-4 py-1.5 bg-highlighter border-2 border-ink rounded-full text-xs font-extrabold text-ink shadow-solid-sm">
         <Sparkles className="w-3.5 h-3.5 text-stamp" />
-        <span>🇧🇩 Bangladesh National ICT Curriculum & Olympiad Aligned</span>
+        <span>Bangladesh National ICT Curriculum & Olympiad Aligned</span>
       </div>
 
       <div className="space-y-4 max-w-4xl mx-auto">
@@ -69,40 +69,7 @@ export const HeroNotebook: React.FC<HeroNotebookProps> = ({ onOpenAuth }) => {
         </div>
         <div className="flex items-center space-x-1.5">
           <CheckCircle2 className="w-4 h-4 text-green-700" />
-          <span>Python 3, C++ & Web Logic</span>
-        </div>
-      </div>
-
-      <div className="pt-4 max-w-3xl mx-auto">
-        <div className="p-6 sm:p-8 bg-paper-card border-2 border-ink rounded-[28px] shadow-solid-lg text-left space-y-4">
-          <div className="flex items-center justify-between border-b-2 border-ink/20 pb-3">
-            <div className="flex items-center space-x-2">
-              <span className="w-3 h-3 rounded-full bg-red-400 border border-ink"></span>
-              <span className="w-3 h-3 rounded-full bg-yellow-400 border border-ink"></span>
-              <span className="w-3 h-3 rounded-full bg-green-400 border border-ink"></span>
-              <span className="font-mono text-xs font-extrabold text-ink pl-2">rulemaker_sample.py (Paper Notebook)</span>
-            </div>
-            <span className="text-[10px] font-mono font-extrabold uppercase px-2.5 py-0.5 bg-highlighter border border-ink rounded-full">
-              Live OCR Active
-            </span>
-          </div>
-
-          <div className="font-mono text-xs sm:text-sm text-ink bg-paper-light p-4 rounded-xl border border-ink/20 overflow-x-auto leading-relaxed whitespace-pre font-bold">
-# Paper Notebook Code Sample
-name = "Bangladesh"
-for i in range(3):
-    print("Hello " + name + "! Quest passed")
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs font-mono font-extrabold text-graphite">
-            <span>⚡ Execution time: <strong>0.028s</strong> (Sandboxed via Cloud Engine)</span>
-            <button
-              onClick={() => onOpenAuth('signup')}
-              className="text-stamp hover:underline font-extrabold flex items-center gap-1"
-            >
-              Try writing your first script ➔
-            </button>
-          </div>
+          <span>Python 3, C++ & JavaScript</span>
         </div>
       </div>
     </div>

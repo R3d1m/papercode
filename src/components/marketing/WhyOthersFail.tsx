@@ -11,10 +11,10 @@ export const WhyOthersFail: React.FC = () => {
           Root Cause Analysis
         </span>
         <h2 className="text-3xl sm:text-4xl font-extrabold text-ink tracking-tight">
-          Why Scratch, Khan Academy & Sololearn fail in Bangladesh.
+          Why Existing Solutions Fail in Bangladesh.
         </h2>
         <p className="text-graphite text-base mt-2">
-          They were designed for Silicon Valley and urban private schools with fast Wi-Fi and desktop monitors.
+          They were designed for urban populations with fast Wi-Fi and desktop monitors.
         </p>
       </div>
 
@@ -24,7 +24,7 @@ export const WhyOthersFail: React.FC = () => {
         <BentoCard variant="kraft" className="space-y-4 border-2 border-dashed border-ink/40">
           <div className="flex items-center space-x-2 text-stamp font-extrabold text-sm uppercase">
             <XCircle className="w-4 h-4" />
-            <span>Legacy Platforms (Scratch, Khan Academy, Replit)</span>
+            <span>Legacy Platforms</span>
           </div>
 
           <div className="space-y-3 text-xs text-graphite">
@@ -32,7 +32,7 @@ export const WhyOthersFail: React.FC = () => {
               <Monitor className="w-4 h-4 text-stamp flex-shrink-0 mt-0.5" />
               <div>
                 <strong className="text-ink block">Mandatory PC & Wide Screen:</strong>
-                Block-based Scratch and multi-pane IDEs crash or become unusable on 5.5-inch smartphone screens.
+                Block-based and multi-pane IDEs crash or become unusable on 5.5-inch smartphone screens.
               </div>
             </div>
 
@@ -68,7 +68,7 @@ export const WhyOthersFail: React.FC = () => {
               </div>
               <div>
                 <strong className="text-ink block">Zero Keyboard Friction:</strong>
-                Students write algorithms on paper at natural pen speed without wrestling with mobile keyboards.
+                Students write algorithms on paper at natural speed without wrestling with mobile keyboards.
               </div>
             </div>
 

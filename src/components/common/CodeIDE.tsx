@@ -13,21 +13,13 @@ interface CodeIDEProps {
 }
 
 export const CodeIDE: React.FC<CodeIDEProps> = ({
-  initialCode = `# Scanned from Class 9 ICT Notebook, Ex 4.2
-def calculate_grade(marks):
-    if marks >= 80:
-        return "A+ (Golden GPA 5.0)"
-    elif marks >= 70:
-        return "A (GPA 4.0)"
-    elif marks >= 60:
-        return "A- (GPA 3.5)"
-    else:
-        return "Passed"
-
-student_marks = [85, 92, 64, 78]
-print("=== PaperCode Mobile Execution Result ===")
-for m in student_marks:
-    print(f"Marks: {m} -> Grade: {calculate_grade(m)}")`,
+  initialCode = `# BdOI Training: String Slicing Cipher
+secret = "BANGLADESH-2026"
+reversed_code = secret[::-1]
+print("=== BdOI Cipher Engine ===")
+print("Original Text: ", secret)
+print("Reversed Cipher:", reversed_code)
+print("Decrypted Back :", reversed_code[::-1])`,
   initialLanguage = 'python',
   title = 'PaperCode Mobile IDE & Judge0 Cloud Runner',
   showLanguageSelector = true,

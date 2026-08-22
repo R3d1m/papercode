@@ -12,7 +12,7 @@ export const WriteScanRunFlow: React.FC<WriteScanRunFlowProps> = ({ onOpenAuth }
     {
       num: '01',
       icon: <PenTool className="w-6 h-6 text-ink" />,
-      title: 'Write on Paper Khata',
+      title: 'Write on Paper',
       subtitle: 'Regular Ruled or Plain Notebook',
       desc: 'Students write code using simple pen/pencil conventions. Indentations and colons are naturally preserved with line guidance.'
     },
@@ -20,7 +20,7 @@ export const WriteScanRunFlow: React.FC<WriteScanRunFlowProps> = ({ onOpenAuth }
       num: '02',
       icon: <Camera className="w-6 h-6 text-stamp" />,
       title: 'Snap with Phone Camera',
-      subtitle: 'Sub-$60 Android Devices Supported',
+      subtitle: 'Any mobile or computer Devices Supported',
       desc: 'Our specialized neural OCR runs on mobile, correcting distortion, lighting shadows, and handwriting slant instantly.'
     },
     {
@@ -65,10 +65,10 @@ export const WriteScanRunFlow: React.FC<WriteScanRunFlowProps> = ({ onOpenAuth }
               <p className="text-xs sm:text-sm text-graphite font-medium leading-relaxed">{s.desc}</p>
             </div>
 
-            <div className="pt-3 border-t border-ink/10 flex items-center space-x-1.5 text-xs font-mono font-bold text-green-700">
+            {/* <div className="pt-3 border-t border-ink/10 flex items-center space-x-1.5 text-xs font-mono font-bold text-green-700">
               <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
               <span>Tested across 64 districts</span>
-            </div>
+            </div> */}
           </BentoCard>
         ))}
       </div>

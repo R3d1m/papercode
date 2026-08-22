@@ -34,7 +34,7 @@ export const CallToActionBanner: React.FC<CallToActionBannerProps> = ({ onOpenAu
             </div>
             <h3 className="text-2xl font-extrabold text-ink">For Students & Coders</h3>
             <p className="text-xs sm:text-sm text-ink/80 font-bold leading-relaxed">
-              Write Python and C++ code on your paper khata. Scan with your phone camera, earn XP, complete interactive quests, and join your school teacher&apos;s classroom.
+              Write Python and C++ code on your khata. Scan with your phone camera, earn XP, complete interactive quests, and join your school teacher&apos;s classroom.
             </p>
           </div>
 
@@ -65,7 +65,7 @@ export const CallToActionBanner: React.FC<CallToActionBannerProps> = ({ onOpenAu
             </div>
             <h3 className="text-2xl font-extrabold text-ink">For Teachers & Schools</h3>
             <p className="text-xs sm:text-sm text-graphite font-bold leading-relaxed">
-              Create digital classrooms, distribute ICT homework assignments, generate student join codes, and automate batch grading of handwritten notebook photos in seconds.
+              Create digital classrooms, distribute homework assignments, generate student join codes, and automate batch grading of handwritten notebook photos in seconds.
             </p>
           </div>
 

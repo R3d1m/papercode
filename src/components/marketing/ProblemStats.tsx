@@ -80,7 +80,7 @@ export const ProblemStats: React.FC = () => {
           </div>
 
           <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs font-bold text-emerald-800">
-            ✅ Write by lantern, scan when power returns
+            ✅ Write by pen, scan when power returns
           </div>
         </BentoCard>
 

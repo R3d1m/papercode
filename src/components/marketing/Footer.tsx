@@ -105,10 +105,10 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               Affiliation
             </div>
             <div className="space-y-2 text-graphite font-medium">
-              <div className="flex items-start space-x-2">
+              {/* <div className="flex items-start space-x-2">
                 <School className="w-4 h-4 text-stamp flex-shrink-0 mt-0.5" />
                 <span>CUET EdTech Research Lab, Chittagong, Bangladesh</span>
-              </div>
+              </div> */}
               <div className="flex items-center space-x-2">
                 <Mail className="w-4 h-4 text-stamp flex-shrink-0" />
                 <span className="font-mono text-[11px]">contact@papercode.edu.bd</span>
@@ -127,11 +127,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           <div>
             {'© ' + new Date().getFullYear() + ' PaperCode Bangladesh. Handwrite. Scan. Execute.'}
           </div>
-          <div className="flex items-center space-x-4">
-            <span>🇧🇩 Built for 64 Districts</span>
+          {/* <div className="flex items-center space-x-4">
+            <span>Built for 64 Districts</span>
             <span>•</span>
             <span>Zero Computer Lab Bottlenecks</span>
-          </div>
+          </div> */}
         </div>
 
       </div>

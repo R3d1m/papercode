@@ -85,6 +85,7 @@ export const TopNav: React.FC<TopNavProps> = ({
       return [
         { label: 'Roadmaps', action: () => { setMobileMenuOpen(false); setCurrentView('public_roadmaps'); }, active: currentView === 'public_roadmaps' },
         { label: 'Courses', action: () => { setMobileMenuOpen(false); setCurrentView('public_courses'); }, active: currentView === 'public_courses' },
+        // { label: 'Code Runner', action: () => { setMobileMenuOpen(false); setCurrentView('public_playground'); }, active: currentView === 'public_playground' },
         { label: 'Pricing', action: () => { setMobileMenuOpen(false); setCurrentView('public_pricing'); }, active: currentView === 'public_pricing' },
         { label: 'Blogs', action: () => { setMobileMenuOpen(false); setCurrentView('public_blogs'); }, active: currentView === 'public_blogs' },
       ];
@@ -95,6 +96,7 @@ export const TopNav: React.FC<TopNavProps> = ({
         { label: 'Dashboard', action: () => { setMobileMenuOpen(false); setCurrentView('student_dashboard'); }, active: currentView === 'student_dashboard' },
         { label: 'Classrooms', action: () => { setMobileMenuOpen(false); setCurrentView('student_classrooms'); }, active: currentView === 'student_classrooms' || currentView === 'student_classroom_detail' },
         { label: 'Roadmaps', action: () => { setMobileMenuOpen(false); setCurrentView('student_roadmaps'); }, active: currentView === 'student_roadmaps' },
+        { label: 'Code Runner', action: () => { setMobileMenuOpen(false); setCurrentView('public_playground'); }, active: currentView === 'public_playground' },
         { label: 'Blogs', action: () => { setMobileMenuOpen(false); setCurrentView('public_blogs'); }, active: currentView === 'public_blogs' },
       ];
     }
@@ -105,6 +107,7 @@ export const TopNav: React.FC<TopNavProps> = ({
         { label: 'Gradebook', action: () => { setMobileMenuOpen(false); setCurrentView('teacher_gradebook'); }, active: currentView === 'teacher_gradebook' },
         { label: 'Classrooms', action: () => { setMobileMenuOpen(false); setCurrentView('teacher_classrooms'); }, active: currentView === 'teacher_classrooms' },
         { label: 'Analytics', action: () => { setMobileMenuOpen(false); setCurrentView('teacher_analytics'); }, active: currentView === 'teacher_analytics' },
+        { label: 'Code Runner', action: () => { setMobileMenuOpen(false); setCurrentView('public_playground'); }, active: currentView === 'public_playground' },
         { label: 'Blogs', action: () => { setMobileMenuOpen(false); setCurrentView('public_blogs'); }, active: currentView === 'public_blogs' },
       ];
     }
@@ -115,6 +118,7 @@ export const TopNav: React.FC<TopNavProps> = ({
         { label: 'Curriculum', action: () => { setMobileMenuOpen(false); setCurrentView('teacher_builder'); }, active: currentView === 'teacher_builder' },
         { label: 'Gradebook', action: () => { setMobileMenuOpen(false); setCurrentView('teacher_gradebook'); }, active: currentView === 'teacher_gradebook' },
         { label: 'Classrooms', action: () => { setMobileMenuOpen(false); setCurrentView('teacher_classrooms'); }, active: currentView === 'teacher_classrooms' },
+        { label: 'Code Runner', action: () => { setMobileMenuOpen(false); setCurrentView('public_playground'); }, active: currentView === 'public_playground' },
         { label: 'Blogs', action: () => { setMobileMenuOpen(false); setCurrentView('public_blogs'); }, active: currentView === 'public_blogs' },
       ];
     }
@@ -158,7 +162,7 @@ export const TopNav: React.FC<TopNavProps> = ({
           </div>
           <div>
             <span className="font-extrabold text-lg sm:text-xl tracking-tight text-ink block leading-none">PaperCode</span>
-            <span className="text-[9px] font-mono text-stamp font-extrabold uppercase hidden sm:block">Bangladesh 🇧🇩</span>
+            <span className="text-[9px] font-mono text-stamp font-extrabold uppercase hidden sm:block">Bangladesh</span>
           </div>
         </div>
 
