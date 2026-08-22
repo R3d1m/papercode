@@ -16,12 +16,25 @@ import {
   Bot
 } from 'lucide-react';
 
+export function normalizeOutput(str: string | null | undefined): string {
+  if (str === null || str === undefined) return '';
+  return str
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .split('\n')
+    .map(line => line.trimEnd())
+    .join('\n')
+    .trim();
+}
+
 interface CodeIDEProps {
   initialCode?: string;
   initialLanguage?: 'python' | 'javascript' | 'cpp';
   title?: string;
   showLanguageSelector?: boolean;
   onCodeChange?: (newCode: string) => void;
+  expectedOutput?: string;
+  onExecutionResult?: (result: Judge0ExecutionResult | null, isMatching: boolean) => void;
   className?: string;
 }
 
@@ -37,6 +50,8 @@ print("Decrypted Back :", reversed_code[::-1])`,
   title = 'PaperCode Mobile IDE & Judge0 Cloud Runner',
   showLanguageSelector = true,
   onCodeChange,
+  expectedOutput,
+  onExecutionResult,
   className = ''
 }) => {
   const [language, setLanguage] = useState<'python' | 'javascript' | 'cpp'>(initialLanguage);
@@ -66,14 +81,31 @@ print("Decrypted Back :", reversed_code[::-1])`,
     )
   );
 
+  const hasExpectedOutput = typeof expectedOutput === 'string' && expectedOutput.trim().length > 0;
+  const isOutputMatching = Boolean(
+    executionResult && (
+      hasExpectedOutput
+        ? normalizeOutput(executionResult.stdout) === normalizeOutput(expectedOutput)
+        : (executionResult.exit_code === 0 && Boolean(executionResult.stdout))
+    )
+  );
+
   const handleRun = async () => {
     setIsRunning(true);
     const langId = LANGUAGE_IDS[language];
     try {
       const result = await executeCodeOnJudge0(code, langId, stdin);
       setExecutionResult(result);
+
+      const matching = hasExpectedOutput
+        ? normalizeOutput(result.stdout) === normalizeOutput(expectedOutput)
+        : (result.exit_code === 0 && Boolean(result.stdout));
+
+      if (onExecutionResult) {
+        onExecutionResult(result, matching);
+      }
     } catch (e: any) {
-      setExecutionResult({
+      const errRes: Judge0ExecutionResult = {
         stdout: null,
         stderr: e.message || 'Execution failed',
         compile_output: null,
@@ -82,7 +114,11 @@ print("Decrypted Back :", reversed_code[::-1])`,
         time: '0.00',
         memory: 0,
         exit_code: 1
-      });
+      };
+      setExecutionResult(errRes);
+      if (onExecutionResult) {
+        onExecutionResult(errRes, false);
+      }
     } finally {
       setIsRunning(false);
     }
@@ -294,12 +330,55 @@ print("Decrypted Back :", reversed_code[::-1])`,
         </div>
       </div>
 
+      {/* Optional Expected Output Panel for Lesson Challenges */}
+      {hasExpectedOutput && (
+        <div className="border-t border-slate-800 bg-[#0B1120] p-3 font-mono text-xs space-y-2">
+          <div className="flex items-center justify-between text-slate-300 font-bold border-b border-slate-800/80 pb-1.5 flex-wrap gap-2">
+            <div className="flex items-center space-x-1.5 text-highlighter">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>EXPECTED CHALLENGE OUTPUT</span>
+            </div>
+            {executionResult && (
+              <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                isOutputMatching
+                  ? 'bg-green-900/90 text-green-300 border border-green-500'
+                  : 'bg-red-900/90 text-red-300 border border-red-500'
+              }`}>
+                {isOutputMatching ? '✓ Output Matches Expected Output!' : '✗ Output Does Not Match'}
+              </span>
+            )}
+          </div>
+          
+          <div className="p-2.5 bg-[#050811] rounded-xl border border-slate-800 text-slate-200 font-mono text-xs whitespace-pre-wrap leading-relaxed">
+            {expectedOutput}
+          </div>
+
+          {executionResult && !isOutputMatching && (
+            <div className="p-2.5 bg-red-950/60 border border-red-500/60 rounded-xl text-red-200 text-[11px] leading-relaxed flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <strong>Output Mismatch:</strong> Your program&apos;s output must match the required output above to unlock submission. Please check your logic/spelling and click <strong>RUN CODE</strong> again!
+              </div>
+            </div>
+          )}
+
+          {executionResult && isOutputMatching && (
+            <div className="p-2.5 bg-green-950/60 border border-green-500/60 rounded-xl text-green-200 text-[11px] leading-relaxed flex items-center gap-2">
+              <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
+              <div>
+                <strong>Challenge Passed:</strong> Your output matches perfectly! You can now submit this challenge below.
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Terminal Output Panel */}
       <div className="border-t border-slate-800 bg-[#090D16] p-3 font-mono text-xs">
         <div className="flex items-center justify-between pb-2 border-b border-slate-800/80 mb-2">
           <div className="flex items-center space-x-2 text-slate-300 font-bold">
             <Terminal className="w-3.5 h-3.5 text-highlighter" />
-            <span>TERMINAL OUTPUT</span>
+            <span>TERMINAL OUTPUT (Your Code Output)</span>
             {executionResult && (
               <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${executionResult.exit_code === 0 ? 'bg-green-900/80 text-green-300 border border-green-600' : 'bg-red-900/80 text-red-300 border border-red-600'}`}>
                 {executionResult.status.description} (Exit: {executionResult.exit_code})

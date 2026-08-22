@@ -112,6 +112,18 @@ export async function seedDatabase() {
           feedback TEXT,
           submitted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE TABLE IF NOT EXISTS lesson_progress (
+          id VARCHAR(64) PRIMARY KEY,
+          user_id VARCHAR(64) REFERENCES users(id) ON DELETE CASCADE,
+          lesson_id VARCHAR(64) NOT NULL,
+          course_id VARCHAR(64),
+          xp_earned INTEGER DEFAULT 150,
+          completed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(user_id, lesson_id)
+      );
+
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS completed_lessons TEXT[] DEFAULT ARRAY[]::TEXT[];
     `);
 
     // 2. Seed Admin User in PostgreSQL

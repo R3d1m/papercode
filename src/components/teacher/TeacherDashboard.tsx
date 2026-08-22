@@ -36,7 +36,7 @@ export const TeacherDashboard: React.FC = () => {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [className, setClassName] = useState('');
   const [subject, setSubject] = useState('');
-  const [grade, setGrade] = useState('Class 9');
+  const [grade, setGrade] = useState('');
 
   // Manage Classroom Modal State
   const [managingClassroom, setManagingClassroom] = useState<Classroom | null>(null);
@@ -255,19 +255,15 @@ export const TeacherDashboard: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="font-extrabold text-ink block">Grade Level</label>
-                <select
+                <label className="font-extrabold text-ink block">Grade Level / Batch / Section *</label>
+                <input
+                  type="text"
+                  required
                   value={grade}
                   onChange={e => setGrade(e.target.value)}
-                  className="w-full p-2.5 bg-white border-2 border-ink rounded-xl font-bold text-ink"
-                >
-                  <option>Class 8</option>
-                  <option>Class 9</option>
-                  <option>Class 10 (SSC)</option>
-                  <option>HSC 1st Year</option>
-                  <option>HSC 2nd Year</option>
-                  <option>Olympiad Camp</option>
-                </select>
+                  placeholder="e.g. Class 9, Class 10 (SSC), HSC 1st Year, Section B, Olympiad Batch..."
+                  className="w-full p-2.5 bg-white border-2 border-ink rounded-xl font-bold text-ink text-xs"
+                />
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-2">

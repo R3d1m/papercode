@@ -37,7 +37,7 @@ interface AppContextType {
   completedLessonIds: string[];
   activeLesson: Lesson | null;
   setActiveLesson: (lesson: Lesson | null) => void;
-  completeLesson: (lessonId: string) => void;
+  completeLesson: (lessonId: string, courseId?: string) => void;
   isLessonUnlocked: (lessonId: string) => boolean;
   studentXp: number;
   studentStreak: number;
@@ -205,10 +205,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }).catch(() => {});
   }, []);
 
+  // Sync completed lessons from Database API whenever user changes
+  useEffect(() => {
+    if (currentUser?.id) {
+      apiClient.getLessonProgress(currentUser.id).then(res => {
+        if (res && res.completedLessons && Array.isArray(res.completedLessons) && res.completedLessons.length > 0) {
+          setCompletedLessonIds(prev => {
+            const merged = Array.from(new Set([...prev, ...res.completedLessons]));
+            try {
+              localStorage.setItem('papercode_completed_lessons', JSON.stringify(merged));
+            } catch {}
+            return merged;
+          });
+
+          setCurrentUser(prev => {
+            const merged = Array.from(new Set([...(prev.completedLessons || []), ...res.completedLessons]));
+            const updated = { ...prev, completedLessons: merged };
+            try {
+              localStorage.setItem('papercode_user_session', JSON.stringify(updated));
+            } catch {}
+            return updated;
+          });
+        }
+      }).catch(() => {});
+    }
+  }, [currentUser?.id]);
+
   const allOrderedLessons: Lesson[] = courses.flatMap(c => (c.modules || []).flatMap(m => m.lessons || []));
 
-  const completeLesson = (lessonId: string) => {
+  const completeLesson = (lessonId: string, courseId?: string) => {
     if (!lessonId) return;
+
     setCompletedLessonIds(prev => {
       if (prev.includes(lessonId)) return prev;
       const updated = [...prev, lessonId];
@@ -222,12 +249,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const curr = prev.completedLessons || [];
       if (curr.includes(lessonId)) return prev;
       const updatedLessons = [...curr, lessonId];
-      const updatedUser = { ...prev, completedLessons: updatedLessons };
+      const updatedUser = { ...prev, completedLessons: updatedLessons, xp: (prev.xp || 0) + 150 };
       try {
         localStorage.setItem('papercode_user_session', JSON.stringify(updatedUser));
       } catch {}
       return updatedUser;
     });
+
+    // Save and sync immediately to PostgreSQL DB
+    if (currentUser?.id) {
+      apiClient.saveLessonProgress(currentUser.id, lessonId, courseId, 150).then(res => {
+        if (res && res.completedLessons && Array.isArray(res.completedLessons)) {
+          setCompletedLessonIds(prev => Array.from(new Set([...prev, ...res.completedLessons])));
+        }
+      }).catch(err => {
+        console.warn('Could not sync lesson progress to DB:', err);
+      });
+    }
   };
 
   const isLessonUnlocked = (lessonId: string): boolean => {

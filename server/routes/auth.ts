@@ -115,6 +115,13 @@ router.post('/login', async (req: Request, res: Response) => {
     // STRICT ROLE ENFORCEMENT: Enforce the role registered in PostgreSQL
     const userRole = u.role || 'student';
 
+    // Retrieve real completed lessons from DB
+    const progRes = await pool.query('SELECT DISTINCT lesson_id FROM lesson_progress WHERE user_id = $1', [u.id]);
+    const completedLessonIds = Array.from(new Set([
+      ...(progRes.rows.map(r => r.lesson_id)),
+      ...(u.completed_lessons || [])
+    ]));
+
     const authenticatedUser = {
       id: u.id,
       name: u.name,
@@ -129,7 +136,7 @@ router.post('/login', async (req: Request, res: Response) => {
       streak: u.streak_days || 0,
       enrolledCourseIds: [],
       enrolledClassroomIds: [],
-      completedLessons: [],
+      completedLessons: completedLessonIds,
       token: 'jwt_token_' + Date.now()
     };
 
@@ -237,6 +244,14 @@ router.post('/google', async (req: Request, res: Response) => {
       }
 
       const userRole = u.role || 'student';
+
+      // Retrieve real completed lessons from DB
+      const progRes = await pool.query('SELECT DISTINCT lesson_id FROM lesson_progress WHERE user_id = $1', [u.id]);
+      const completedLessonIds = Array.from(new Set([
+        ...(progRes.rows.map(r => r.lesson_id)),
+        ...(u.completed_lessons || [])
+      ]));
+
       const authenticatedUser = {
         id: u.id,
         name: u.name,
@@ -251,7 +266,7 @@ router.post('/google', async (req: Request, res: Response) => {
         streak: u.streak_days || 0,
         enrolledCourseIds: [],
         enrolledClassroomIds: [],
-        completedLessons: [],
+        completedLessons: completedLessonIds,
         token: 'jwt_google_token_' + Date.now()
       };
 

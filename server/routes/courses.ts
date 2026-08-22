@@ -364,4 +364,79 @@ router.delete('/:courseId', async (req: Request, res: Response) => {
   }
 });
 
+// POST: Save / Update Lesson Progress for a Student
+router.post('/progress', async (req: Request, res: Response) => {
+  try {
+    const { userId, lessonId, courseId, xpEarned = 150 } = req.body;
+    if (!userId || !lessonId) {
+      return res.status(400).json({ success: false, message: 'userId and lessonId are required.' });
+    }
+
+    const progressId = 'prog-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
+
+    // 1. Insert or update lesson_progress record
+    await pool.query(`
+      INSERT INTO lesson_progress (id, user_id, lesson_id, course_id, xp_earned)
+      VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (user_id, lesson_id) DO UPDATE 
+      SET completed_at = CURRENT_TIMESTAMP
+    `, [progressId, userId, lessonId, courseId || null, xpEarned]);
+
+    // 2. Append to users table completed_lessons & add XP if user exists
+    await pool.query(`
+      UPDATE users 
+      SET completed_lessons = ARRAY(
+        SELECT DISTINCT unnest(array_append(COALESCE(completed_lessons, ARRAY[]::TEXT[]), $1))
+      ),
+      xp_points = COALESCE(xp_points, 0) + $2,
+      updated_at = CURRENT_TIMESTAMP
+      WHERE id = $3
+    `, [lessonId, xpEarned, userId]);
+
+    // 3. Return all completed lessons for this user
+    const progRes = await pool.query(
+      'SELECT DISTINCT lesson_id FROM lesson_progress WHERE user_id = $1',
+      [userId]
+    );
+    const completedLessons = progRes.rows.map(r => r.lesson_id);
+
+    return res.json({
+      success: true,
+      message: 'Lesson progress recorded and synced successfully in database.',
+      completedLessons
+    });
+  } catch (err: any) {
+    console.error('Error saving lesson progress in DB:', err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// GET: Fetch all Completed Lessons for a Student
+router.get('/progress/:userId', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const progRes = await pool.query(
+      'SELECT DISTINCT lesson_id FROM lesson_progress WHERE user_id = $1',
+      [userId]
+    );
+    
+    const userRes = await pool.query(
+      'SELECT completed_lessons FROM users WHERE id = $1',
+      [userId]
+    );
+
+    const fromProgress = progRes.rows.map(r => r.lesson_id);
+    const fromUser = userRes.rows[0]?.completed_lessons || [];
+    const allCompleted = Array.from(new Set([...fromProgress, ...fromUser]));
+
+    return res.json({
+      success: true,
+      completedLessons: allCompleted
+    });
+  } catch (err: any) {
+    console.error('Error fetching lesson progress from DB:', err.message);
+    return res.status(500).json({ success: false, message: err.message, completedLessons: [] });
+  }
+});
+
 export default router;

@@ -235,6 +235,30 @@ export const apiClient = {
     return { success: false, courses: [] };
   },
 
+  async saveLessonProgress(userId: string, lessonId: string, courseId?: string, xpEarned: number = 150) {
+    try {
+      const res = await fetch(API_BASE + '/courses/progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, lessonId, courseId, xpEarned })
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {
+      console.warn('saveLessonProgress offline fallback active:', e);
+    }
+    return { success: true, completedLessons: [lessonId] };
+  },
+
+  async getLessonProgress(userId: string) {
+    try {
+      const res = await fetch(API_BASE + '/courses/progress/' + userId);
+      if (res.ok) return await res.json();
+    } catch (e) {
+      console.warn('getLessonProgress offline fallback active:', e);
+    }
+    return { success: false, completedLessons: [] };
+  },
+
   async createCourse(data: any) {
     try {
       const res = await fetch(API_BASE + '/courses', {

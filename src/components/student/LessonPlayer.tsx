@@ -4,7 +4,7 @@ import { apiClient } from '../../services/apiClient';
 import { BentoCard } from '../common/BentoCard';
 import { PillButton } from '../common/PillButton';
 import { CodeIDE } from '../common/CodeIDE';
-import { Lesson, LessonBlock, TheoryBlock, McqBlock, ExerciseBlock, Course, Module } from '../../types';
+import { Lesson, LessonBlock, TheoryBlock, McqBlock, ExerciseBlock, Course, Module, Judge0ExecutionResult } from '../../types';
 import { 
   Menu,
   CheckCircle2, 
@@ -128,6 +128,10 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ onBack }) => {
   const [scannedImageUrl, setScannedImageUrl] = useState<string | null>(null);
   const [scannedConfidence, setScannedConfidence] = useState<number | null>(null);
 
+  // Challenge test case verification state
+  const [isCurrentChallengePassed, setIsCurrentChallengePassed] = useState<boolean>(false);
+  const [currentExecutionResult, setCurrentExecutionResult] = useState<Judge0ExecutionResult | null>(null);
+
   useEffect(() => {
     const block = blocks[currentBlockIndex];
     if (block && block.type === 'exercise' && block.starterCode) {
@@ -137,6 +141,8 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ onBack }) => {
     } else if (activeLesson?.exercise?.starterCode) {
       setIdeCode(activeLesson.exercise.starterCode);
     }
+    setIsCurrentChallengePassed(false);
+    setCurrentExecutionResult(null);
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [activeLesson?.id, currentBlockIndex]);
 
@@ -229,7 +235,17 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ onBack }) => {
   };
 
   const handleExerciseSubmit = (ex: ExerciseBlock) => {
+    const hasExpected = Boolean(ex.testCases?.[0]?.expectedOutput && ex.testCases[0].expectedOutput.trim().length > 0);
+    
+    if (hasExpected && !isCurrentChallengePassed) {
+      alert('You must run your code and achieve the exact expected output before proceeding!');
+      return;
+    }
+
     setCompletedBlocks(prev => ({ ...prev, [ex.id]: true }));
+
+    const expected = ex.testCases?.[0]?.expectedOutput || '';
+    const actual = currentExecutionResult?.stdout || expected || 'Code executed successfully';
 
     submitExercise({
       exerciseId: ex.id,
@@ -243,8 +259,8 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ onBack }) => {
       ocrConfidence: scannedConfidence || (scannedImageUrl ? 98.5 : undefined),
       code: ideCode || ex.starterCode,
       language: ex.language,
-      executionResult: {
-        stdout: ex.testCases?.[0]?.expectedOutput || 'Hello from PaperCode Bangladesh!',
+      executionResult: currentExecutionResult || {
+        stdout: actual,
         stderr: null,
         compile_output: null,
         message: null,
@@ -258,8 +274,8 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ onBack }) => {
           testCaseId: ex.testCases?.[0]?.id || 'tc-1', 
           passed: true, 
           input: ex.testCases?.[0]?.input || '', 
-          expected: ex.testCases?.[0]?.expectedOutput || 'Hello from PaperCode Bangladesh!', 
-          actual: ex.testCases?.[0]?.expectedOutput || 'Hello from PaperCode Bangladesh!' 
+          expected: expected, 
+          actual: actual 
         }
       ],
       score: 10,
@@ -269,7 +285,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ onBack }) => {
     });
 
     if (currentBlockIndex + 1 >= blocks.length) {
-      completeLesson(activeLesson.id);
+      completeLesson(activeLesson.id, currentCourse?.id);
       setCurrentBlockIndex(blocks.length);
       confetti({ particleCount: 140, spread: 90, origin: { y: 0.6 } });
     } else {
@@ -285,7 +301,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ onBack }) => {
     }
 
     if (currentBlockIndex + 1 >= blocks.length) {
-      completeLesson(activeLesson.id);
+      completeLesson(activeLesson.id, currentCourse?.id);
       setCurrentBlockIndex(blocks.length);
       confetti({ particleCount: 140, spread: 90, origin: { y: 0.6 } });
     } else {
@@ -727,7 +743,15 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ onBack }) => {
                 <div className="space-y-2 w-full">
                   <CodeIDE
                     initialCode={ideCode}
-                    onCodeChange={(newCode) => setIdeCode(newCode)}
+                    onCodeChange={(newCode) => {
+                      setIdeCode(newCode);
+                      setIsCurrentChallengePassed(false);
+                    }}
+                    expectedOutput={(currentBlock as ExerciseBlock).testCases?.[0]?.expectedOutput}
+                    onExecutionResult={(result, isMatching) => {
+                      setCurrentExecutionResult(result);
+                      setIsCurrentChallengePassed(isMatching);
+                    }}
                     title="Code Editor"
                     className="w-full min-h-[380px]"
                   />
@@ -737,20 +761,29 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ onBack }) => {
                 <div className="pt-6 border-t-2 border-ink/15 flex flex-wrap items-center justify-between gap-4">
                   <button
                     onClick={() => currentBlockIndex > 0 && setCurrentBlockIndex(currentBlockIndex - 1)}
-                    className="text-xs font-extrabold text-graphite underline hover:text-ink"
+                    className="text-xs font-extrabold text-graphite underline hover:text-ink cursor-pointer"
                   >
-                    ← Back to Checkpoint Quiz
+                    ← Back to Previous Step
                   </button>
 
-                  <PillButton
-                    variant="stamp"
-                    size="lg"
-                    onClick={() => handleExerciseSubmit(currentBlock as ExerciseBlock)}
-                    className="btn-bounce ml-auto shadow-solid-xs"
-                    icon={<Award className="w-4 h-4" />}
-                  >
-                    {currentBlockIndex + 1 >= blocks.length ? 'Submit & Complete Lesson (+150 XP) ➔' : 'Submit & Next Challenge ➔'}
-                  </PillButton>
+                  <div className="flex items-center gap-3 ml-auto flex-wrap">
+                    {!isCurrentChallengePassed && Boolean((currentBlock as ExerciseBlock).testCases?.[0]?.expectedOutput?.trim()) && (
+                      <span className="text-xs font-mono font-bold text-amber-900 bg-amber-100 px-3 py-1.5 rounded-xl border border-amber-400 animate-pulse">
+                        ⚡ Run code & match expected output to pass
+                      </span>
+                    )}
+
+                    <PillButton
+                      variant={isCurrentChallengePassed || !Boolean((currentBlock as ExerciseBlock).testCases?.[0]?.expectedOutput?.trim()) ? "stamp" : "secondary"}
+                      size="lg"
+                      disabled={!isCurrentChallengePassed && Boolean((currentBlock as ExerciseBlock).testCases?.[0]?.expectedOutput?.trim())}
+                      onClick={() => handleExerciseSubmit(currentBlock as ExerciseBlock)}
+                      className={`btn-bounce shadow-solid-xs ${!isCurrentChallengePassed && Boolean((currentBlock as ExerciseBlock).testCases?.[0]?.expectedOutput?.trim()) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      icon={<Award className="w-4 h-4" />}
+                    >
+                      {currentBlockIndex + 1 >= blocks.length ? 'Submit & Complete Lesson (+150 XP) ➔' : 'Submit & Next Challenge ➔'}
+                    </PillButton>
+                  </div>
                 </div>
 
               </BentoCard>
