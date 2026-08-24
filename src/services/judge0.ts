@@ -10,8 +10,38 @@ export const LANGUAGE_IDS = {
 const JUDGE0_BASE_URL = 'https://ce.judge0.com';
 
 function simulateExecution(code: string, languageId: number, stdin?: string): Judge0ExecutionResult {
+  const trimmed = code.trim();
+
+  // 1. PYTHON (Language ID: 71)
   if (languageId === 71) {
     try {
+      // Check for obvious C++ or JS syntax in Python
+      if (trimmed.includes('#include') || /int\s+main\s*\(/.test(trimmed) || /void\s+main\s*\(/.test(trimmed)) {
+        return {
+          stdout: null,
+          stderr: '  File "main.py", line 1\n    #include <stdio.h>\n    ^\nSyntaxError: invalid syntax\n[Python 3.12.0 Process Terminated with Exit Code 1]',
+          compile_output: null,
+          message: 'SyntaxError',
+          status: { id: 11, description: 'Runtime Error (NZEC)' },
+          time: '0.015',
+          memory: 2900,
+          exit_code: 1
+        };
+      }
+
+      if (trimmed.includes('console.log') || trimmed.includes('function(') || trimmed.includes('const ') || trimmed.includes('let ')) {
+        return {
+          stdout: null,
+          stderr: 'Traceback (most recent call last):\n  File "main.py", line 1, in <module>\nNameError: name \'console\' is not defined',
+          compile_output: null,
+          message: 'NameError',
+          status: { id: 11, description: 'Runtime Error (NZEC)' },
+          time: '0.012',
+          memory: 2900,
+          exit_code: 1
+        };
+      }
+
       const outputLines: string[] = [];
       const lines = code.split('\n');
       
@@ -63,7 +93,10 @@ function simulateExecution(code: string, languageId: number, stdin?: string): Ju
         exit_code: 1
       };
     }
-  } else if (languageId === 63) {
+  } 
+  
+  // 2. JAVASCRIPT (Language ID: 63)
+  else if (languageId === 63) {
     try {
       const logs: string[] = [];
       const customConsole = {
@@ -88,25 +121,87 @@ function simulateExecution(code: string, languageId: number, stdin?: string): Ju
     } catch (e: any) {
       return {
         stdout: null,
-        stderr: "Uncaught Error: " + e.message,
+        stderr: "Uncaught " + (e.name || 'Error') + ": " + e.message,
         compile_output: null,
-        message: null,
+        message: e.name || 'Runtime Error',
         status: { id: 11, description: 'Runtime Error' },
         time: '0.015',
         memory: 4096,
         exit_code: 1
       };
     }
-  } else if (languageId === 54) {
-    let output = "PaperCode C++ Runner:\n7 is PRIME\n12 is NOT prime\n19 is PRIME\n29 is PRIME\n35 is NOT prime\n97 is PRIME";
+  } 
+  
+  // 3. C / C++ (Language ID: 54)
+  else if (languageId === 54) {
+    const hasMain = /int\s+main\s*\(|void\s+main\s*\(|main\s*\(/.test(trimmed);
+    const hasIncludes = /#include\s*<.*>/.test(trimmed);
+    const hasCppIO = /printf\s*\(|cout\s*<<|puts\s*\(/.test(trimmed);
+    const hasPythonComments = /^\s*#(?!\s*include|\s*define|\s*pragma|\s*ifdef|\s*ifndef|\s*endif)/m.test(code);
+    const hasPythonAssign = /^[a-zA-Z_]\w*\s*=\s*(?!.*(?:int|float|char|auto|double|std::))/m.test(code);
+
+    // If code has Python comments, Python-style untyped variable assignments, or lacks main/includes/stdio
+    if (hasPythonComments || hasPythonAssign || (!hasMain && !hasIncludes && !hasCppIO)) {
+      const firstLine = code.split('\n')[0] || '';
+      return {
+        stdout: null,
+        stderr: `main.cpp:1:1: error: stray '${firstLine.includes('#') ? '#' : firstLine.charAt(0) || '?'}' in program\n` +
+                `main.cpp: In function 'int main()':\n` +
+                `main.cpp: error: expected primary-expression or type specifier before token\n` +
+                `[GCC 13.2.0 Compilation Failed - Exit Code 1]`,
+        compile_output: `main.cpp:1:1: error: stray '#' in program\nmain.cpp: error: expected unqualified-id before token\ncompilation terminated due to -Wfatal-errors.`,
+        message: 'Compilation Error',
+        status: { id: 6, description: 'Compilation Error' },
+        time: '0.005',
+        memory: 1240,
+        exit_code: 1
+      };
+    }
+
+    // Valid C/C++ execution simulation
+    const outputLines: string[] = [];
+    const lines = code.split('\n');
+
+    for (const line of lines) {
+      // Parse printf("...")
+      const printfMatch = line.match(/printf\s*\(\s*["'](.*?)["'](?:\s*,\s*(.*?))?\s*\)/);
+      if (printfMatch) {
+        let text = printfMatch[1].replace(/\\n/g, '').replace(/\\t/g, ' ');
+        const varPart = printfMatch[2];
+        if (text.includes('%d') && varPart) {
+          const varMatch = code.match(new RegExp(`(?:int|float|double|long)\\s+${varPart.trim()}\\s*=\\s*([0-9.]+)`));
+          if (varMatch) {
+            text = text.replace('%d', varMatch[1]);
+          }
+        }
+        outputLines.push(text);
+      }
+
+      // Parse cout << "..."
+      const coutMatch = line.match(/cout\s*<<\s*["'](.*?)["']/);
+      if (coutMatch) {
+        outputLines.push(coutMatch[1]);
+      }
+
+      // Parse puts("...")
+      const putsMatch = line.match(/puts\s*\(\s*["'](.*?)["']\s*\)/);
+      if (putsMatch) {
+        outputLines.push(putsMatch[1]);
+      }
+    }
+
+    if (outputLines.length === 0) {
+      outputLines.push("=== Program executed with exit code 0 ===");
+    }
+
     return {
-      stdout: output,
+      stdout: outputLines.join('\n'),
       stderr: null,
       compile_output: null,
       message: null,
       status: { id: 3, description: 'Accepted' },
-      time: '0.008',
-      memory: 1450,
+      time: '0.004',
+      memory: 1420,
       exit_code: 0
     };
   }
